@@ -6,5 +6,8 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="C:/DOCS/IISPL/Installations/c3p0-0.10.0.jar"/>
+	<classpathentry kind="lib" path="C:/DOCS/IISPL/Installations/mchange-commons-java-0.2.20.jar"/>
+	<classpathentry kind="lib" path="C:/DOCS/IISPL/Installations/postgresql-42.7.10.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
