@@ -1,0 +1,16 @@
+# Sensitive Files
+db.properties
+
+# Eclipse IDE Files
+.classpath
+.project
+.settings/
+bin/
+
+# Library Files
+lib/
+Referenced Libraries/
+
+# System Library
+JRE System Library/
+
