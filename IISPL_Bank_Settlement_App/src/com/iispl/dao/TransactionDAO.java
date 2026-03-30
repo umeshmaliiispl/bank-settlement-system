@@ -52,7 +52,7 @@ public class TransactionDAO {
 
     // READ ALL
     public List<Transaction> findAll() {
-        List<Transaction> transactions = new ArrayList<>();
+        List<Transaction> transactionList = new ArrayList<>();
         String sql = "SELECT * FROM transaction";
 
         try (Connection connection = DatabaseConfig.getConnection();
@@ -60,14 +60,14 @@ public class TransactionDAO {
              ResultSet resultSet = statement.executeQuery(sql)) {
 
             while (resultSet.next()) {
-                transactions.add(mapRow(resultSet));
+            	transactionList.add(mapRow(resultSet));
             }
 
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
-        return transactions;
+        return transactionList;
     }
 
     // DELETE

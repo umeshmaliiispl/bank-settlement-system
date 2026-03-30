@@ -52,7 +52,7 @@ public class AccountDAO {
 
     // READ ALL
     public List<Account> findAll() {
-        List<Account> accounts = new ArrayList<>();
+        List<Account> accountList = new ArrayList<>();
         String sql = "SELECT * FROM account";
 
         try (Connection connection = DatabaseConfig.getConnection();
@@ -60,14 +60,14 @@ public class AccountDAO {
              ResultSet resultSet = statement.executeQuery(sql)) {
 
             while (resultSet.next()) {
-                accounts.add(mapRow(resultSet));
+                accountList.add(mapRow(resultSet));
             }
 
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
-        return accounts;
+        return accountList;
     }
 
     // UPDATE FULL
