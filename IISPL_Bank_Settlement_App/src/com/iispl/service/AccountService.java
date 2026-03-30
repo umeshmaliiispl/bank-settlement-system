@@ -1,53 +1,24 @@
 package com.iispl.service;
 
-import com.iispl.dao.AccountDAO;
+
 import com.iispl.entity.Account;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-public class AccountService {
+public interface AccountService {
 
-    private final AccountDAO dao = new AccountDAO();
+    void createAccount(Account account);
 
-    public void createAccount(Account account) {
-        dao.save(account);
-    }
+    Account getAccount(Long id);
 
-    public Account getAccount(Long id) {
-        return dao.findById(id)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
-    }
+    List<Account> getAllAccounts();
 
-    public List<Account> getAllAccounts() {
-        return dao.findAll();
-    }
+    void updateAccount(Account account);
 
-    public void updateAccount(Account account) {
-        dao.update(account);
-    }
+    void deleteAccount(Long id);
 
-    public void deleteAccount(Long id) {
-        dao.delete(id);
-    }
+    void credit(Long id, BigDecimal amount);
 
-    public void credit(Long id, BigDecimal amount) {
-        Account account = getAccount(id);
-
-        account.setBalance(account.getBalance().add(amount));
-
-        dao.updateBalance(id, account.getBalance());
-    }
-
-    public void debit(Long id, BigDecimal amount) {
-        Account account = getAccount(id);
-
-        if (account.getBalance().compareTo(amount) < 0) {
-            throw new RuntimeException("Insufficient Balance");
-        }
-
-        account.setBalance(account.getBalance().subtract(amount));
-
-        dao.updateBalance(id, account.getBalance());
-    }
+    void debit(Long id, BigDecimal amount);
 }

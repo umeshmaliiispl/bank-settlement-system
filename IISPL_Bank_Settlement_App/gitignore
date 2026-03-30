@@ -14,3 +14,5 @@ Referenced Libraries/
 # System Library
 JRE System Library/
 
+#java ignorefiles
+MainMenuForTransactionDomainFeature
