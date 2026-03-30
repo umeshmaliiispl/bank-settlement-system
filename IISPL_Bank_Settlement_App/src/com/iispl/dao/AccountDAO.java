@@ -11,17 +11,17 @@ import java.util.Optional;
 public class AccountDAO {
 
     // CREATE
-    public void save(Account acc) {
+    public void save(Account account) {
         String sql = "INSERT INTO account(account_number, account_name, balance) VALUES (?,?,?)";
 
-        try (Connection con = DatabaseConfig.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection connection = DatabaseConfig.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            ps.setString(1, acc.getAccountNumber());
-            ps.setString(2, acc.getAccountName());
-            ps.setBigDecimal(3, acc.getBalance());
+            preparedStatement.setString(1, account.getAccountNumber());
+            preparedStatement.setString(2, account.getAccountName());
+            preparedStatement.setBigDecimal(3, account.getBalance());
 
-            ps.executeUpdate();
+            preparedStatement.executeUpdate();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -29,18 +29,18 @@ public class AccountDAO {
     }
 
     // READ BY ID
-    public Optional<Account> findById(Long id) {
+    public Optional<Account> findById(Long accountId) {
         String sql = "SELECT * FROM account WHERE id=?";
 
-        try (Connection con = DatabaseConfig.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection connection = DatabaseConfig.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            ps.setLong(1, id);
-            ResultSet rs = ps.executeQuery();
+            preparedStatement.setLong(1, accountId);
+            ResultSet resultSet = preparedStatement.executeQuery();
 
-            if (rs.next()) {
-                Account acc = mapRow(rs);
-                return Optional.of(acc);
+            if (resultSet.next()) {
+                Account account = mapRow(resultSet);
+                return Optional.of(account);
             }
 
         } catch (Exception e) {
@@ -52,36 +52,36 @@ public class AccountDAO {
 
     // READ ALL
     public List<Account> findAll() {
-        List<Account> list = new ArrayList<>();
+        List<Account> accounts = new ArrayList<>();
         String sql = "SELECT * FROM account";
 
-        try (Connection con = DatabaseConfig.getConnection();
-             Statement st = con.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
+        try (Connection connection = DatabaseConfig.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
 
-            while (rs.next()) {
-                list.add(mapRow(rs));
+            while (resultSet.next()) {
+                accounts.add(mapRow(resultSet));
             }
 
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
-        return list;
+        return accounts;
     }
 
     // UPDATE FULL
-    public void update(Account acc) {
+    public void update(Account account) {
         String sql = "UPDATE account SET account_name=?, balance=? WHERE id=?";
 
-        try (Connection con = DatabaseConfig.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection connection = DatabaseConfig.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            ps.setString(1, acc.getAccountName());
-            ps.setBigDecimal(2, acc.getBalance());
-            ps.setLong(3, acc.getId());
+            preparedStatement.setString(1, account.getAccountName());
+            preparedStatement.setBigDecimal(2, account.getBalance());
+            preparedStatement.setLong(3, account.getId());
 
-            ps.executeUpdate();
+            preparedStatement.executeUpdate();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -89,16 +89,16 @@ public class AccountDAO {
     }
 
     // UPDATE BALANCE ONLY
-    public void updateBalance(Long id, java.math.BigDecimal balance) {
+    public void updateBalance(Long accountId, java.math.BigDecimal balance) {
         String sql = "UPDATE account SET balance=? WHERE id=?";
 
-        try (Connection con = DatabaseConfig.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection connection = DatabaseConfig.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            ps.setBigDecimal(1, balance);
-            ps.setLong(2, id);
+            preparedStatement.setBigDecimal(1, balance);
+            preparedStatement.setLong(2, accountId);
 
-            ps.executeUpdate();
+            preparedStatement.executeUpdate();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -106,14 +106,14 @@ public class AccountDAO {
     }
 
     // DELETE
-    public void delete(Long id) {
+    public void delete(Long accountId) {
         String sql = "DELETE FROM account WHERE id=?";
 
-        try (Connection con = DatabaseConfig.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection connection = DatabaseConfig.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            ps.setLong(1, id);
-            ps.executeUpdate();
+            preparedStatement.setLong(1, accountId);
+            preparedStatement.executeUpdate();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -121,12 +121,12 @@ public class AccountDAO {
     }
 
     // COMMON MAPPER
-    private Account mapRow(ResultSet rs) throws SQLException {
-        Account acc = new Account();
-        acc.setId(rs.getLong("id"));
-        acc.setAccountNumber(rs.getString("account_number"));
-        acc.setAccountName(rs.getString("account_name"));
-        acc.setBalance(rs.getBigDecimal("balance"));
-        return acc;
+    private Account mapRow(ResultSet resultSet) throws SQLException {
+        Account account = new Account();
+        account.setId(resultSet.getLong("id"));
+        account.setAccountNumber(resultSet.getString("account_number"));
+        account.setAccountName(resultSet.getString("account_name"));
+        account.setBalance(resultSet.getBigDecimal("balance"));
+        return account;
     }
 }

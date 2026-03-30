@@ -19,15 +19,31 @@ public class Account {
 
 	public Account() {}
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() { 
+    	return id; 
+    	}
+    public void setId(Long id) {
+    	this.id = id; 
+    	}
 
-    public String getAccountNumber() { return accountNumber; }
-    public void setAccountNumber(String accountNumber) { this.accountNumber = accountNumber; }
+    public String getAccountNumber() {
+    	return accountNumber;
+    	}
+    public void setAccountNumber(String accountNumber) { 
+    	this.accountNumber = accountNumber; 
+    	}
 
-    public String getAccountName() { return accountName; }
-    public void setAccountName(String accountName) { this.accountName = accountName; }
+    public String getAccountName() {
+    	return accountName;
+    	}
+    public void setAccountName(String accountName) { 
+    	this.accountName = accountName; 
+    	}
 
-    public BigDecimal getBalance() { return balance; }
-    public void setBalance(BigDecimal balance) { this.balance = balance; }
+    public BigDecimal getBalance() {
+    	return balance; 
+    	}
+    public void setBalance(BigDecimal balance) {
+    	this.balance = balance;
+    	}
 }

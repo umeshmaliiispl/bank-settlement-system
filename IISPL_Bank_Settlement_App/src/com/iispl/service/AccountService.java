@@ -10,8 +10,8 @@ public class AccountService {
 
     private final AccountDAO dao = new AccountDAO();
 
-    public void createAccount(Account acc) {
-        dao.save(acc);
+    public void createAccount(Account account) {
+        dao.save(account);
     }
 
     public Account getAccount(Long id) {
@@ -23,8 +23,8 @@ public class AccountService {
         return dao.findAll();
     }
 
-    public void updateAccount(Account acc) {
-        dao.update(acc);
+    public void updateAccount(Account account) {
+        dao.update(account);
     }
 
     public void deleteAccount(Long id) {
@@ -32,19 +32,22 @@ public class AccountService {
     }
 
     public void credit(Long id, BigDecimal amount) {
-        Account acc = getAccount(id);
-        acc.setBalance(acc.getBalance().add(amount));
-        dao.updateBalance(id, acc.getBalance());
+        Account account = getAccount(id);
+
+        account.setBalance(account.getBalance().add(amount));
+
+        dao.updateBalance(id, account.getBalance());
     }
 
     public void debit(Long id, BigDecimal amount) {
-        Account acc = getAccount(id);
+        Account account = getAccount(id);
 
-        if (acc.getBalance().compareTo(amount) < 0) {
+        if (account.getBalance().compareTo(amount) < 0) {
             throw new RuntimeException("Insufficient Balance");
         }
 
-        acc.setBalance(acc.getBalance().subtract(amount));
-        dao.updateBalance(id, acc.getBalance());
+        account.setBalance(account.getBalance().subtract(amount));
+
+        dao.updateBalance(id, account.getBalance());
     }
 }

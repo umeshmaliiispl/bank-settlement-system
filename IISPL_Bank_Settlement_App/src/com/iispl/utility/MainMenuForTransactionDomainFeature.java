@@ -16,18 +16,18 @@ public class MainMenuForTransactionDomainFeature {
 
     private static final AccountService accountService = new AccountService();
     private static final TransactionService transactionService = new TransactionService();
-    private static final Scanner sc = new Scanner(System.in);
+    private static final Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
 
         while (true) {
-            showMenu();
+            displayMenu();
             System.out.print("Enter your choice: ");
-            String choice = sc.nextLine();
+            String choice = scanner.nextLine();
 
             switch (choice) {
                 case "1" -> createAccount();
-                case "2" -> viewAccount();
+                case "2" -> viewAccountById();
                 case "3" -> viewAllAccounts();
                 case "4" -> creditAccount();
                 case "5" -> debitAccount();
@@ -46,7 +46,7 @@ public class MainMenuForTransactionDomainFeature {
         }
     }
 
-    private static void showMenu() {
+    private static void displayMenu() {
         System.out.println("===== BANKING SYSTEM MENU =====");
         System.out.println("1. Create Account");
         System.out.println("2. View Account by ID");
@@ -64,36 +64,36 @@ public class MainMenuForTransactionDomainFeature {
     private static void createAccount() {
         try {
             System.out.print("Enter Account Number: ");
-            String accNumber = sc.nextLine();
+            String accountNumber = scanner.nextLine();
 
             System.out.print("Enter Account Name: ");
-            String accName = sc.nextLine();
+            String accountName = scanner.nextLine();
 
             System.out.print("Enter Initial Balance: ");
-            BigDecimal balance = new BigDecimal(sc.nextLine());
+            BigDecimal initialBalance = new BigDecimal(scanner.nextLine());
 
-            Account acc = new Account();
-            acc.setAccountNumber(accNumber);
-            acc.setAccountName(accName);
-            acc.setBalance(balance);
+            Account account = new Account();
+            account.setAccountNumber(accountNumber);
+            account.setAccountName(accountName);
+            account.setBalance(initialBalance);
 
-            accountService.createAccount(acc);
-            System.out.println("Account created successfully with ID: " + acc.getId());
+            accountService.createAccount(account);
+            System.out.println("Account created successfully with ID: " + account.getId());
         } catch (Exception e) {
             System.out.println("Error creating account: " + e.getMessage());
         }
     }
 
-    private static void viewAccount() {
+    private static void viewAccountById() {
         try {
             System.out.print("Enter Account ID: ");
-            Long id = Long.parseLong(sc.nextLine());
+            Long accountId = Long.parseLong(scanner.nextLine());
 
-            Account acc = accountService.getAccount(id);
-            System.out.println("Account ID: " + acc.getId());
-            System.out.println("Account Number: " + acc.getAccountNumber());
-            System.out.println("Account Name: " + acc.getAccountName());
-            System.out.println("Balance: " + acc.getBalance());
+            Account account = accountService.getAccount(accountId);
+            System.out.println("Account ID: " + account.getId());
+            System.out.println("Account Number: " + account.getAccountNumber());
+            System.out.println("Account Name: " + account.getAccountName());
+            System.out.println("Balance: " + account.getBalance());
         } catch (Exception e) {
             System.out.println("Error fetching account: " + e.getMessage());
         }
@@ -107,20 +107,23 @@ public class MainMenuForTransactionDomainFeature {
         }
 
         System.out.println("All Accounts:");
-        for (Account acc : accounts) {
-            System.out.println("ID: " + acc.getId() + " | Number: " + acc.getAccountNumber() +
-                    " | Name: " + acc.getAccountName() + " | Balance: " + acc.getBalance());
+        for (Account account : accounts) {
+            System.out.println("ID: " + account.getId() +
+                    " | Number: " + account.getAccountNumber() +
+                    " | Name: " + account.getAccountName() +
+                    " | Balance: " + account.getBalance());
         }
     }
 
     private static void creditAccount() {
         try {
             System.out.print("Enter Account ID: ");
-            Long id = Long.parseLong(sc.nextLine());
-            System.out.print("Enter Amount to Credit: ");
-            BigDecimal amount = new BigDecimal(sc.nextLine());
+            Long accountId = Long.parseLong(scanner.nextLine());
 
-            accountService.credit(id, amount);
+            System.out.print("Enter Amount to Credit: ");
+            BigDecimal creditAmount = new BigDecimal(scanner.nextLine());
+
+            accountService.credit(accountId, creditAmount);
             System.out.println("Amount credited successfully!");
         } catch (Exception e) {
             System.out.println("Error crediting account: " + e.getMessage());
@@ -130,11 +133,12 @@ public class MainMenuForTransactionDomainFeature {
     private static void debitAccount() {
         try {
             System.out.print("Enter Account ID: ");
-            Long id = Long.parseLong(sc.nextLine());
-            System.out.print("Enter Amount to Debit: ");
-            BigDecimal amount = new BigDecimal(sc.nextLine());
+            Long accountId = Long.parseLong(scanner.nextLine());
 
-            accountService.debit(id, amount);
+            System.out.print("Enter Amount to Debit: ");
+            BigDecimal debitAmount = new BigDecimal(scanner.nextLine());
+
+            accountService.debit(accountId, debitAmount);
             System.out.println("Amount debited successfully!");
         } catch (Exception e) {
             System.out.println("Error debiting account: " + e.getMessage());
@@ -144,18 +148,20 @@ public class MainMenuForTransactionDomainFeature {
     private static void processInterBankTransaction() {
         try {
             System.out.print("Enter Sender Account ID: ");
-            Long senderId = Long.parseLong(sc.nextLine());
+            Long senderAccountId = Long.parseLong(scanner.nextLine());
+
             System.out.print("Enter Receiver Account Number: ");
-            String receiverAcc = sc.nextLine();
+            String receiverAccountNumber = scanner.nextLine();
+
             System.out.print("Enter Amount: ");
-            BigDecimal amount = new BigDecimal(sc.nextLine());
+            BigDecimal transactionAmount = new BigDecimal(scanner.nextLine());
 
-            InterBankTransaction txn = new InterBankTransaction();
-            txn.setAccountId(senderId);
-            txn.setReceiverAccount(receiverAcc);
-            txn.setAmount(amount);
+            InterBankTransaction transaction = new InterBankTransaction();
+            transaction.setAccountId(senderAccountId);
+            transaction.setReceiverAccount(receiverAccountNumber);
+            transaction.setAmount(transactionAmount);
 
-            transactionService.process(txn);
+            transactionService.process(transaction);
             System.out.println("InterBank transaction processed successfully!");
         } catch (Exception e) {
             System.out.println("Error processing transaction: " + e.getMessage());
@@ -163,27 +169,32 @@ public class MainMenuForTransactionDomainFeature {
     }
 
     private static void viewAllTransactions() {
-        List<Transaction> txns = transactionService.getAllTransactions();
-        if (txns.isEmpty()) {
+        List<Transaction> transactions = transactionService.getAllTransactions();
+        if (transactions.isEmpty()) {
             System.out.println("No transactions found.");
             return;
         }
 
         System.out.println("All Transactions:");
-        for (Transaction txn : txns) {
-            System.out.println("ID: " + txn.getId() +
-                    " | Account ID: " + txn.getAccountId() +
-                    " | Type: " + txn.getType() +
-                    " | Amount: " + txn.getAmount() +
-                    ((txn instanceof InterBankTransaction ibt) ? " | Receiver: " + ibt.getReceiverAccount() : ""));
+        for (Transaction transaction : transactions) {
+            System.out.print("ID: " + transaction.getId() +
+                    " | Account ID: " + transaction.getAccountId() +
+                    " | Type: " + transaction.getType() +
+                    " | Amount: " + transaction.getAmount());
+
+            if (transaction instanceof InterBankTransaction interBankTransaction) {
+                System.out.print(" | Receiver: " + interBankTransaction.getReceiverAccount());
+            }
+            System.out.println();
         }
     }
 
     private static void deleteAccount() {
         try {
             System.out.print("Enter Account ID to delete: ");
-            Long id = Long.parseLong(sc.nextLine());
-            accountService.deleteAccount(id);
+            Long accountId = Long.parseLong(scanner.nextLine());
+
+            accountService.deleteAccount(accountId);
             System.out.println("Account deleted successfully!");
         } catch (Exception e) {
             System.out.println("Error deleting account: " + e.getMessage());
@@ -193,8 +204,9 @@ public class MainMenuForTransactionDomainFeature {
     private static void deleteTransaction() {
         try {
             System.out.print("Enter Transaction ID to delete: ");
-            Long id = Long.parseLong(sc.nextLine());
-            transactionService.deleteTransaction(id);
+            Long transactionId = Long.parseLong(scanner.nextLine());
+
+            transactionService.deleteTransaction(transactionId);
             System.out.println("Transaction deleted successfully!");
         } catch (Exception e) {
             System.out.println("Error deleting transaction: " + e.getMessage());

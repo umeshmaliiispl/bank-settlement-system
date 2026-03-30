@@ -8,29 +8,29 @@ import java.util.List;
 
 public class TransactionService {
 
-    private final TransactionDAO txnDAO = new TransactionDAO();
-    private final AccountService accService = new AccountService();
+    private final TransactionDAO transactionDAO = new TransactionDAO();
+    private final AccountService accountService = new AccountService();
 
-    public void process(Transaction txn) {
+    public void process(Transaction transaction) {
 
         // 1. Get account
-        Account acc = accService.getAccount(txn.getAccountId());
+        Account account = accountService.getAccount(transaction.getAccountId());
 
         // 2. Execute transaction logic
-        txn.execute(acc);
+        transaction.execute(account);
 
         // 3. Update balance in DB
-        accService.updateAccount(acc);
+        accountService.updateAccount(account);
 
         // 4. Save transaction
-        txnDAO.save(txn);
+        transactionDAO.save(transaction);
     }
 
     public List<Transaction> getAllTransactions() {
-        return txnDAO.findAll();
+        return transactionDAO.findAll();
     }
 
     public void deleteTransaction(Long id) {
-        txnDAO.delete(id);
+        transactionDAO.delete(id);
     }
 }

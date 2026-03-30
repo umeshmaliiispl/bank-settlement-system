@@ -11,17 +11,17 @@ import java.util.Optional;
 public class TransactionDAO {
 
     // CREATE
-    public void save(Transaction txn) {
+    public void save(Transaction transaction) {
         String sql = "INSERT INTO transaction(account_id, type, amount) VALUES (?,?,?)";
 
-        try (Connection con = DatabaseConfig.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection connection = DatabaseConfig.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            ps.setLong(1, txn.getAccountId());
-            ps.setString(2, txn.getType());
-            ps.setBigDecimal(3, txn.getAmount());
+            preparedStatement.setLong(1, transaction.getAccountId());
+            preparedStatement.setString(2, transaction.getType());
+            preparedStatement.setBigDecimal(3, transaction.getAmount());
 
-            ps.executeUpdate();
+            preparedStatement.executeUpdate();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -29,18 +29,18 @@ public class TransactionDAO {
     }
 
     // READ BY ID
-    public Optional<Transaction> findById(Long id) {
+    public Optional<Transaction> findById(Long transactionId) {
         String sql = "SELECT * FROM transaction WHERE id=?";
 
-        try (Connection con = DatabaseConfig.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection connection = DatabaseConfig.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            ps.setLong(1, id);
-            ResultSet rs = ps.executeQuery();
+            preparedStatement.setLong(1, transactionId);
+            ResultSet resultSet = preparedStatement.executeQuery();
 
-            if (rs.next()) {
-                Transaction txn = mapRow(rs);
-                return Optional.of(txn);
+            if (resultSet.next()) {
+                Transaction transaction = mapRow(resultSet);
+                return Optional.of(transaction);
             }
 
         } catch (Exception e) {
@@ -52,51 +52,51 @@ public class TransactionDAO {
 
     // READ ALL
     public List<Transaction> findAll() {
-        List<Transaction> list = new ArrayList<>();
+        List<Transaction> transactions = new ArrayList<>();
         String sql = "SELECT * FROM transaction";
 
-        try (Connection con = DatabaseConfig.getConnection();
-             Statement st = con.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
+        try (Connection connection = DatabaseConfig.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
 
-            while (rs.next()) {
-                list.add(mapRow(rs));
+            while (resultSet.next()) {
+                transactions.add(mapRow(resultSet));
             }
 
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
-        return list;
+        return transactions;
     }
 
     // DELETE
-    public void delete(Long id) {
+    public void delete(Long transactionId) {
         String sql = "DELETE FROM transaction WHERE id=?";
 
-        try (Connection con = DatabaseConfig.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection connection = DatabaseConfig.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            ps.setLong(1, id);
-            ps.executeUpdate();
+            preparedStatement.setLong(1, transactionId);
+            preparedStatement.executeUpdate();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    // SIMPLE MAPPER (NOTE: returns basic Transaction)
-    private Transaction mapRow(ResultSet rs) throws SQLException {
-        Transaction txn = new Transaction() {
+    // SIMPLE MAPPER (returns a basic Transaction)
+    private Transaction mapRow(ResultSet resultSet) throws SQLException {
+        Transaction transaction = new Transaction() {
             @Override
             public void execute(com.iispl.entity.Account account) {}
         };
 
-        txn.setId(rs.getLong("id"));
-        txn.setAccountId(rs.getLong("account_id"));
-        txn.setType(rs.getString("type"));
-        txn.setAmount(rs.getBigDecimal("amount"));
+        transaction.setId(resultSet.getLong("id"));
+        transaction.setAccountId(resultSet.getLong("account_id"));
+        transaction.setType(resultSet.getString("type"));
+        transaction.setAmount(resultSet.getBigDecimal("amount"));
 
-        return txn;
+        return transaction;
     }
 }
