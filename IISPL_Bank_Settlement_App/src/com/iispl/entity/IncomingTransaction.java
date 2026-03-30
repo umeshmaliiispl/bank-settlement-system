@@ -17,59 +17,108 @@ import com.iispl.enums.TransactionType;
  */
 public class IncomingTransaction extends BaseEntity {
 
-    private SourceSystem sourceSystem;          // HAS-A
-    private String sourceRef;
-    private String rawPayload;
-    private String normalizedPayload;
-    private TransactionType txnType;
-    private BigDecimal amount;
-    private String currency;
-    private LocalDate valueDate;
-    private ProcessingStatus processingStatus;
-    private LocalDateTime ingestTimestamp;
+	private SourceSystem sourceSystem; // HAS-A
+	private String sourceRef;
+	private String rawPayload;
+	private String normalizedPayload;
+	private TransactionType txnType;
+	private BigDecimal amount;
+	private String currency;
+	private LocalDate valueDate;
+	private ProcessingStatus processingStatus;
+	private LocalDateTime ingestTimestamp;
 
-    public IncomingTransaction() {
-        super();
-        this.processingStatus = ProcessingStatus.RECEIVED;
-        this.ingestTimestamp = LocalDateTime.now();
-    }
+	public IncomingTransaction() {
+		super();
+		this.processingStatus = ProcessingStatus.RECEIVED;
+		this.ingestTimestamp = LocalDateTime.now();
+	}
 
-    // ── Getters & Setters ─────────────────────────────────────────────────────
+	// ── Getters & Setters ─────────────────────────────────────────────────────
 
-    public SourceSystem getSourceSystem() { return sourceSystem; }
-    public void setSourceSystem(SourceSystem sourceSystem) { this.sourceSystem = sourceSystem; }
+	public SourceSystem getSourceSystem() {
+		return sourceSystem;
+	}
 
-    public String getSourceRef() { return sourceRef; }
-    public void setSourceRef(String sourceRef) { this.sourceRef = sourceRef; }
+	public void setSourceSystem(SourceSystem sourceSystem) {
+		this.sourceSystem = sourceSystem;
+	}
 
-    public String getRawPayload() { return rawPayload; }
-    public void setRawPayload(String rawPayload) { this.rawPayload = rawPayload; }
+	public String getSourceRef() {
+		return sourceRef;
+	}
 
-    public String getNormalizedPayload() { return normalizedPayload; }
-    public void setNormalizedPayload(String normalizedPayload) { this.normalizedPayload = normalizedPayload; }
+	public void setSourceRef(String sourceRef) {
+		this.sourceRef = sourceRef;
+	}
 
-    public TransactionType getTxnType() { return txnType; }
-    public void setTxnType(TransactionType txnType) { this.txnType = txnType; }
+	public String getRawPayload() {
+		return rawPayload;
+	}
 
-    public BigDecimal getAmount() { return amount; }
-    public void setAmount(BigDecimal amount) { this.amount = amount; }
+	public void setRawPayload(String rawPayload) {
+		this.rawPayload = rawPayload;
+	}
 
-    public String getCurrency() { return currency; }
-    public void setCurrency(String currency) { this.currency = currency; }
+	public String getNormalizedPayload() {
+		return normalizedPayload;
+	}
 
-    public LocalDate getValueDate() { return valueDate; }
-    public void setValueDate(LocalDate valueDate) { this.valueDate = valueDate; }
+	public void setNormalizedPayload(String normalizedPayload) {
+		this.normalizedPayload = normalizedPayload;
+	}
 
-    public ProcessingStatus getProcessingStatus() { return processingStatus; }
-    public void setProcessingStatus(ProcessingStatus processingStatus) { this.processingStatus = processingStatus; }
+	public TransactionType getTxnType() {
+		return txnType;
+	}
 
-    public LocalDateTime getIngestTimestamp() { return ingestTimestamp; }
-    public void setIngestTimestamp(LocalDateTime ingestTimestamp) { this.ingestTimestamp = ingestTimestamp; }
+	public void setTxnType(TransactionType txnType) {
+		this.txnType = txnType;
+	}
 
-    @Override
-    public String toString() {
-        return "IncomingTransaction{id=" + id + ", sourceRef=" + sourceRef
-                + ", amount=" + amount + ", currency=" + currency
-                + ", status=" + processingStatus + "}";
-    }
+	public BigDecimal getAmount() {
+		return amount;
+	}
+
+	public void setAmount(BigDecimal amount) {
+		this.amount = amount;
+	}
+
+	public String getCurrency() {
+		return currency;
+	}
+
+	public void setCurrency(String currency) {
+		this.currency = currency;
+	}
+
+	public LocalDate getValueDate() {
+		return valueDate;
+	}
+
+	public void setValueDate(LocalDate valueDate) {
+		this.valueDate = valueDate;
+	}
+
+	public ProcessingStatus getProcessingStatus() {
+		return processingStatus;
+	}
+
+	public void setProcessingStatus(ProcessingStatus processingStatus) {
+		this.processingStatus = processingStatus;
+	}
+
+	public LocalDateTime getIngestTimestamp() {
+		return ingestTimestamp;
+	}
+
+	public void setIngestTimestamp(LocalDateTime ingestTimestamp) {
+		this.ingestTimestamp = ingestTimestamp;
+	}
+
+	@Override
+	public String toString() {
+		return "IncomingTransaction{id=" + id + ", sourceRef=" + sourceRef + ", amount=" + amount + ", currency="
+				+ currency + ", status=" + processingStatus + "}";
+	}
 }
