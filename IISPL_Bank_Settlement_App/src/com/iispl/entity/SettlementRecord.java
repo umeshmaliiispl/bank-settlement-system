@@ -1,74 +1,63 @@
 package com.iispl.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
 import com.iispl.enums.SettlementStatus;
 
 public class SettlementRecord extends BaseEntity {
 
-	public String getBatchId() {
-		return batchId;
-	}
+    private String batchId;
+    private long incomingTxnId;
+    private BigDecimal settledAmount = BigDecimal.ZERO;
+    private LocalDateTime settledDate;
+    private SettlementStatus settledStatus;
+    private String failureReason;
 
-	public void setBatchId(String batchId) {
-		this.batchId = batchId;
-	}
+    // ✅ DEFAULT CONSTRUCTOR
+    public SettlementRecord() {
+        this.settledDate = LocalDateTime.now();
+        this.settledStatus = SettlementStatus.PENDING;
+    }
 
-	public long getIncomingTxnId() {
-		return incomingTxnId;
-	}
+    // ✅ CORRECT CONSTRUCTOR
+    public SettlementRecord(String batchId,
+                            long incomingTxnId,
+                            BigDecimal settledAmount,
+                            SettlementStatus status) {
 
-	public void setIncomingTxnId(long incomingTxnId) {
-		this.incomingTxnId = incomingTxnId;
-	}
+        this.batchId = batchId;
+        this.incomingTxnId = incomingTxnId;
+        this.settledAmount = settledAmount;
+        this.settledDate = LocalDateTime.now();
+        this.settledStatus = status;
+    }
 
-	public double getSettledAmount() {
-		return settledAmount;
-	}
+    // ─────────────────────────────
+    // GETTERS & SETTERS
+    // ─────────────────────────────
 
-	public void setSettledAmount(double settledAmount) {
-		this.settledAmount = settledAmount;
-	}
+    public String getBatchId() { return batchId; }
+    public void setBatchId(String batchId) { this.batchId = batchId; }
 
-	public LocalDateTime getSettledDate() {
-		return settledDate;
-	}
+    public long getIncomingTxnId() { return incomingTxnId; }
+    public void setIncomingTxnId(long incomingTxnId) { this.incomingTxnId = incomingTxnId; }
 
-	public void setSettledDate(LocalDateTime settledDate) {
-		this.settledDate = settledDate;
-	}
+    public BigDecimal getSettledAmount() { return settledAmount; }
+    public void setSettledAmount(BigDecimal settledAmount) { this.settledAmount = settledAmount; }
 
-	public SettlementStatus getSettledStatus() {
-		return settledStatus;
-	}
+    public LocalDateTime getSettledDate() { return settledDate; }
+    public void setSettledDate(LocalDateTime settledDate) { this.settledDate = settledDate; }
 
-	public void setSettledStatus(SettlementStatus settledStatus) {
-		this.settledStatus = settledStatus;
-	}
+    public SettlementStatus getSettledStatus() { return settledStatus; }
+    public void setSettledStatus(SettlementStatus settledStatus) { this.settledStatus = settledStatus; }
 
-	public String getFailureReason() {
-		return failureReason;
-	}
+    public String getFailureReason() { return failureReason; }
+    public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
 
-	public void setFailureReason(String failureReason) {
-		this.failureReason = failureReason;
-	}
-
-	public SettlementRecord(String batchId, long incomingTxnId, double settledAmount, LocalDateTime settledDate,
-			SettlementStatus settledStatus, String failureReason) {
-		super();
-		this.batchId = batchId;
-		this.incomingTxnId = incomingTxnId;
-		this.settledAmount = settledAmount;
-		this.settledDate = settledDate;
-		this.settledStatus = settledStatus;
-		this.failureReason = failureReason;
-	}
-
-	private String batchId;
-	private long incomingTxnId;
-	private double settledAmount;
-	private LocalDateTime settledDate;
-	private SettlementStatus settledStatus;
-	private String failureReason;
-
+    // ✅ HELPER METHOD (VERY USEFUL)
+    public void markFailed(String reason) {
+        this.settledStatus = SettlementStatus.FAILED;
+        this.failureReason = reason;
+    }
 }

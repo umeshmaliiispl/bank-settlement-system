@@ -1,134 +1,138 @@
 package com.iispl.adaptor;
 
-import com.iispl.entity.IncomingTransaction;
-import com.iispl.enums.SourceType;
-import com.iispl.intefaces.TransactionAdapter;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * AdapterRegistry — Central registry that maps SourceType → TransactionAdapter.
- *
- * This is the heart of the Adapter Pattern implementation.
- *
- * HOW IT WORKS:
- *   1. At startup, all 5 adapters are registered into a HashMap.
- *   2. When a raw payload arrives, the caller provides its SourceType.
- *   3. Registry looks up the correct adapter and calls adapt().
- *   4. A canonical IncomingTransaction is returned — pipeline continues.
- *
- * ADDING A NEW SOURCE SYSTEM (e.g. ACH):
- *   Step 1: Create AchAdapter implements TransactionAdapter
- *   Step 2: Add one line here: register(new AchAdapter());
- *   Step 3: Done. Zero changes to pipeline, settlement, or concurrency code.
- *
- * DESIGN PATTERN: Strategy + Registry (also called "Plugin Registry")
- *
- * ─────────────────────────────────────────────────────────────────
- *   SourceType    │  Adapter Class     │  Protocol
- *   ──────────────┼────────────────────┼────────────────────
- *   CBS           │  CbsAdapter        │  DIRECT_DB
- *   RTGS          │  RtgsAdapter       │  MESSAGE_QUEUE
- *   SWIFT         │  SwiftAdapter      │  MESSAGE_QUEUE
- *   NEFT          │  NeftUpiAdapter    │  FLAT_FILE
- *   UPI           │  NeftUpiAdapter    │  REST_API
- *   FINTECH       │  FintechAdapter    │  REST_API
- * ─────────────────────────────────────────────────────────────────
- */
-public class AdapterRegistry {
+import com.iispl.entity.IncomingTransaction;
+import com.iispl.enums.SourceType;
+import com.iispl.intefaces.TransactionAdapter;
 
-    // Immutable after initialization — thread-safe for concurrent reads
-    private final Map<SourceType, TransactionAdapter> registry;
+/**
+ * AdapterRegistry — Central routing registry for all TransactionAdapters.
+ *
+ * Implements the Strategy + Registry pattern:
+ *   - At startup, all adapters self-register into an immutable Map
+ *   - At runtime, the pipeline provides a SourceType and raw payload
+ *   - Registry looks up the correct adapter and delegates adapt()
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ *  ROUTING TABLE (built at startup)
+ *  ─────────────────────────────────────────────────────────────────────────
+ *  SourceType   │ Adapter Class     │ Wire Format
+ *  ─────────────┼───────────────────┼──────────────────────────────────────
+ *  CBS          │ CbsAdapter        │ Pipe-delimited (7 fields)
+ *  RTGS         │ RtgsAdapter       │ JSON (MQ message)
+ *  SWIFT        │ SwiftAdapter      │ MT103 multi-line tagged
+ *  NEFT         │ NeftUpiAdapter    │ CSV (7 columns, NPCI batch)
+ *  UPI          │ NeftUpiAdapter    │ CSV (same format, real-time push)
+ *  FINTECH      │ FintechAdapter    │ JSON (webhook POST body)
+ * ─────────────────────────────────────────────────────────────────────────
+ *
+ * THREAD SAFETY:
+ *   The registry Map is wrapped in Collections.unmodifiableMap() after init.
+ *   All reads are concurrent-safe. No locking needed.
+ *
+ * HOW TO ADD A NEW SOURCE SYSTEM (e.g. ACH):
+ *   Step 1 — Create  AchAdapter  implements TransactionAdapter
+ *   Step 2 — Add SourceType.ACH to the SourceType enum
+ *   Step 3 — Add one line in the private constructor: register(map, new AchAdapter())
+ *   Step 4 — Done. Zero changes anywhere else in the pipeline.
+ *
+ * SINGLETON:
+ *   Eagerly initialized — safe, fast, no double-checked locking needed.
+ */
+public final class AdapterRegistry {
 
     // ── Singleton ─────────────────────────────────────────────────────────────
     private static final AdapterRegistry INSTANCE = new AdapterRegistry();
 
-    public static AdapterRegistry getInstance() {
-        return INSTANCE;
-    }
+    public static AdapterRegistry getInstance() { return INSTANCE; }
 
-    /**
-     * Private constructor — registers all adapters at startup.
-     */
+    // ── Internal state ────────────────────────────────────────────────────────
+    // Immutable after constructor completes — safe for concurrent read
+    private final Map<SourceType, TransactionAdapter> registry;
+
+    // ── Constructor — registers all adapters ──────────────────────────────────
+
     private AdapterRegistry() {
         Map<SourceType, TransactionAdapter> map = new HashMap<>();
 
-        // Register all 5 source adapters
+        // Register CBS adapter
         register(map, new CbsAdapter());
+
+        // Register RTGS adapter
         register(map, new RtgsAdapter());
+
+        // Register SWIFT adapter
         register(map, new SwiftAdapter());
+
+        // NeftUpiAdapter handles BOTH NEFT and UPI (same CSV format, same adapter)
+        NeftUpiAdapter neftUpiAdapter = new NeftUpiAdapter();
+        map.put(SourceType.NEFT, neftUpiAdapter);
+        map.put(SourceType.UPI,  neftUpiAdapter);
+
+        // Register Fintech adapter
         register(map, new FintechAdapter());
 
-        // NeftUpiAdapter handles BOTH NEFT and UPI
-        NeftUpiAdapter neftUpiAdapter = new NeftUpiAdapter();
-        map.put(SourceType.NEFT,    neftUpiAdapter);
-        map.put(SourceType.UPI,     neftUpiAdapter);
-
+        // Freeze — no further modifications
         this.registry = Collections.unmodifiableMap(map);
 
-        System.out.println("[AdapterRegistry] Initialized with " + registry.size() + " adapters:");
+        // Startup banner
+        System.out.println();
+        System.out.println("  [AdapterRegistry] Initialized with "
+                          + registry.size() + " entries:");
         registry.forEach((k, v) ->
-            System.out.println("    " + k + "  →  " + v.getClass().getSimpleName())
-        );
-    }
-
-    private void register(Map<SourceType, TransactionAdapter> map, TransactionAdapter adapter) {
-        map.put(adapter.getSourceType(), adapter);
+            System.out.printf("    %-10s → %s%n", k, v.getClass().getSimpleName()));
+        System.out.println();
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
 
     /**
-     * Look up adapter for a SourceType and adapt the raw payload.
+     * Route a raw payload to the correct adapter and return a canonical
+     * IncomingTransaction. This is the ONLY entry point used by the
+     * IngestionPipelineRunner and (later) by IngestionWorker threads.
      *
-     * This is the MAIN entry point used by IngestionWorker (Member 4's threading layer).
-     *
-     * @param sourceType  which system sent this payload (CBS / RTGS / SWIFT etc.)
-     * @param rawPayload  raw string payload from that source system
-     * @return            canonical IncomingTransaction ready for BlockingQueue
-     *
+     * @param sourceType  which system sent the payload
+     * @param rawPayload  raw wire string
+     * @return            fully parsed and validated IncomingTransaction
      * @throws IllegalArgumentException if no adapter is registered for sourceType
      */
     public IncomingTransaction adapt(SourceType sourceType, String rawPayload) {
         TransactionAdapter adapter = registry.get(sourceType);
-
-        if (adapter == null) {
+        if (adapter == null)
             throw new IllegalArgumentException(
                 "[AdapterRegistry] No adapter registered for SourceType: " + sourceType
-                + ". Registered types: " + registry.keySet()
-            );
-        }
+                + ". Registered types: " + registry.keySet());
 
-        System.out.println("[AdapterRegistry] Routing " + sourceType + " → " + adapter.getClass().getSimpleName());
         return adapter.adapt(rawPayload);
     }
 
     /**
-     * Get the adapter directly (for testing or manual use).
+     * Retrieve the adapter directly (for testing or manual invocation).
      */
     public TransactionAdapter getAdapter(SourceType sourceType) {
         TransactionAdapter adapter = registry.get(sourceType);
-        if (adapter == null) {
+        if (adapter == null)
             throw new IllegalArgumentException(
-                "[AdapterRegistry] No adapter for: " + sourceType
-            );
-        }
+                "[AdapterRegistry] No adapter for: " + sourceType);
         return adapter;
     }
 
-    /**
-     * Check if an adapter is registered for a given SourceType.
-     */
+    /** Returns true if an adapter is registered for this SourceType. */
     public boolean hasAdapter(SourceType sourceType) {
         return registry.containsKey(sourceType);
     }
 
-    /**
-     * Returns read-only view of all registered adapters.
-     */
+    /** Read-only view of the full routing table (for health checks / monitoring). */
     public Map<SourceType, TransactionAdapter> getAllAdapters() {
         return registry;
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    private void register(Map<SourceType, TransactionAdapter> map, TransactionAdapter adapter) {
+        map.put(adapter.getSourceType(), adapter);
     }
 }
