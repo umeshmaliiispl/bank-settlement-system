@@ -1,16 +1,22 @@
 package com.iispl.dao;
 
-import com.iispl.config.DatabaseConfig;
-import com.iispl.entity.Account;
-
-import java.sql.*;
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class AccountDAO {
+import com.iispl.config.DatabaseConfig;
+import com.iispl.entity.Account;
+
+public class AccountDaoImpl implements AccountDao {
 
     // CREATE
+    @Override
     public void save(Account account) {
         String sql = "INSERT INTO account(account_number, account_name, balance) VALUES (?,?,?)";
 
@@ -29,6 +35,7 @@ public class AccountDAO {
     }
 
     // READ BY ID
+    @Override
     public Optional<Account> findById(Long accountId) {
         String sql = "SELECT * FROM account WHERE id=?";
 
@@ -51,6 +58,7 @@ public class AccountDAO {
     }
 
     // READ ALL
+    @Override
     public List<Account> findAll() {
         List<Account> accountList = new ArrayList<>();
         String sql = "SELECT * FROM account";
@@ -71,6 +79,7 @@ public class AccountDAO {
     }
 
     // UPDATE FULL
+    @Override
     public void update(Account account) {
         String sql = "UPDATE account SET account_name=?, balance=? WHERE id=?";
 
@@ -89,7 +98,8 @@ public class AccountDAO {
     }
 
     // UPDATE BALANCE ONLY
-    public void updateBalance(Long accountId, java.math.BigDecimal balance) {
+    @Override
+    public void updateBalance(Long accountId, BigDecimal balance) {
         String sql = "UPDATE account SET balance=? WHERE id=?";
 
         try (Connection connection = DatabaseConfig.getConnection();
@@ -106,6 +116,7 @@ public class AccountDAO {
     }
 
     // DELETE
+    @Override
     public void delete(Long accountId) {
         String sql = "DELETE FROM account WHERE id=?";
 

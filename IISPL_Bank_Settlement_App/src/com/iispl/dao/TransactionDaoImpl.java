@@ -1,18 +1,23 @@
 package com.iispl.dao;
 
-import com.iispl.config.DatabaseConfig;
-import com.iispl.entity.Transaction;
-
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class TransactionDAO {
+import com.iispl.config.DatabaseConfig;
+import com.iispl.entity.Transaction;
+
+public class TransactionDaoImpl implements TransactionDao  {
 
     // CREATE
     public void save(Transaction transaction) {
-        String sql = "INSERT INTO transaction(account_id, type, amount) VALUES (?,?,?)";
+ 
+    	String sql = "INSERT INTO transaction(account_id, type, amount) VALUES (?,?,?)";
 
         try (Connection connection = DatabaseConfig.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -67,7 +72,9 @@ public class TransactionDAO {
             throw new RuntimeException(e);
         }
 
-        return transactionList;
+        return transactionList
+        		
+        		;
     }
 
     // DELETE
