@@ -71,7 +71,7 @@ public class SourceSystem extends BaseEntity {
 	/** Core Banking System — direct DB staging poll */
 	public static SourceSystem CBS() {
 		SourceSystem s = new SourceSystem("CBS", SourceType.CBS, ProtocolType.DIRECT_DB, "Core Banking System");
-		s.setEndpointUrl("jdbc:postgresql://cbs-db.internal:5432/cbs_staging");
+		s.setEndpointUrl("Demo Url for importing source transaction and file type should be cbs");
 		s.setContactEmail("cbs-ops@iisplbank.in");
 		s.setContactPhone("+91-22-6666-0001");
 		s.setSupportTeam("CBS-OPS");
@@ -84,7 +84,7 @@ public class SourceSystem extends BaseEntity {
 	/** RTGS Gateway — RabbitMQ message queue (RBI) */
 	public static SourceSystem RTGS() {
 		SourceSystem s = new SourceSystem("RTGS", SourceType.RTGS, ProtocolType.MESSAGE_QUEUE, "RBI RTGS Gateway");
-		s.setEndpointUrl("amqp://rtgs-mq.rbi.internal:5672/rtgs-incoming");
+		s.setEndpointUrl("Demo Url for importing source transaction and file type should be amqp");
 		s.setContactEmail("rtgs-gateway@rbi.org.in");
 		s.setContactPhone("1800-111-0001");
 		s.setSupportTeam("RBI-RTGS-OPS");
@@ -99,7 +99,7 @@ public class SourceSystem extends BaseEntity {
 	public static SourceSystem SWIFT() {
 		SourceSystem s = new SourceSystem("SWIFT", SourceType.SWIFT, ProtocolType.MESSAGE_QUEUE,
 				"SWIFT Alliance Gateway");
-		s.setEndpointUrl("amqp://swift-gw.internal:5672/swift-mt103-incoming");
+		s.setEndpointUrl("Demo Url for importing source transaction and file type should be amqp");
 		s.setContactEmail("swift-ops@iisplbank.in");
 		s.setContactPhone("+91-22-6666-0003");
 		s.setSupportTeam("NOSTRO-OPS");
@@ -112,7 +112,7 @@ public class SourceSystem extends BaseEntity {
 	/** NPCI NEFT Gateway — batch flat-file via SFTP */
 	public static SourceSystem NEFT() {
 		SourceSystem s = new SourceSystem("NEFT", SourceType.NEFT, ProtocolType.FLAT_FILE, "NPCI NEFT Batch Gateway");
-		s.setEndpointUrl("sftp://npci-sftp.internal/neft/incoming/");
+		s.setEndpointUrl("Demo Url for importing source transaction and file type should be sftp");
 		s.setContactEmail("neft@npci.org.in");
 		s.setSupportTeam("NPCI-NEFT-OPS");
 		s.setTimeoutSeconds(120);
@@ -125,7 +125,7 @@ public class SourceSystem extends BaseEntity {
 	/** NPCI UPI Gateway — real-time REST push (24x7) */
 	public static SourceSystem UPI() {
 		SourceSystem s = new SourceSystem("UPI", SourceType.UPI, ProtocolType.REST_API, "NPCI UPI Real-Time Gateway");
-		s.setEndpointUrl("https://upi-api.npci.internal/v2/settlement/push");
+		s.setEndpointUrl("Demo Url for importing source transaction and file type should be upi");
 		s.setContactEmail("upi@npci.org.in");
 		s.setSupportTeam("NPCI-UPI-OPS");
 		s.setTimeoutSeconds(15);
@@ -139,7 +139,7 @@ public class SourceSystem extends BaseEntity {
 	public static SourceSystem FINTECH() {
 		SourceSystem s = new SourceSystem("FINTECH", SourceType.FINTECH, ProtocolType.REST_API,
 				"Fintech Partner API Gateway");
-		s.setEndpointUrl("https://webhook.iisplbank.in/api/v2/fintech/settlement");
+		s.setEndpointUrl("Demo Url for importing source transaction and file type should be fintech");
 		s.setContactEmail("fintech-ops@iisplbank.in");
 		s.setContactPhone("+91-22-6666-0005");
 		s.setSupportTeam("FINTECH-SETTLEMENTS");
