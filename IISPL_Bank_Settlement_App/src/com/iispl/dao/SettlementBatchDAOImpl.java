@@ -1,6 +1,10 @@
 package com.iispl.dao;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.Timestamp;
+
 import com.iispl.config.DatabaseConfig;
 import com.iispl.entity.SettlementBatch;
 
@@ -17,7 +21,7 @@ public class SettlementBatchDAOImpl implements SettlementBatchDAO {
 			ps.setDate(2, Date.valueOf(batch.getBatchDate()));
 			ps.setString(3, batch.getBatchStatus().name());
 			ps.setInt(4, batch.getTotalTransactions());
-			ps.setDouble(5, batch.getTotalAmount());
+			ps.setBigDecimal	(5, batch.getTotalAmount());
 			ps.setString(6, batch.getRunBy());
 			ps.setTimestamp(7, Timestamp.valueOf(batch.getRunAt()));
 

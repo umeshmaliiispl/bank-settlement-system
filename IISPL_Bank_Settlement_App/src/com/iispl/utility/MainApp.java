@@ -9,18 +9,11 @@ import java.io.FileReader;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class MainApp {
 
     private static final AdapterRegistry registry = AdapterRegistry.getInstance();
 
-    // 🔥 QUEUE (Producer → Consumer)
-    private static final BlockingQueue<IncomingTransaction> queue =
-            new LinkedBlockingQueue<>();
-
-    // 🔥 STORE ALL TRANSACTIONS (for report)
     private static final List<IncomingTransaction> allTxns =
             new ArrayList<>();
 
@@ -28,22 +21,19 @@ public class MainApp {
 
         System.out.println("========== IISPL INGESTION PIPELINE ==========");
 
-        // STEP 1: PRODUCER
+        // ✅ ONLY INGESTION
         processFile("cbs_transactions.txt", SourceType.CBS);
         processFile("neft_transactions.txt", SourceType.NEFT);
         processFile("upi_transactions.txt", SourceType.UPI);
 
-        // STEP 2: REPORT (🔥 YOUR REQUIREMENT)
+        // ✅ REPORT (FINAL OUTPUT FOR DB TEAM)
         listAllIncomingTransactions();
 
-        // STEP 3: CONSUMER
-        startSettlementEngine();
-
-        System.out.println("\n========== PIPELINE COMPLETE ==========");
+        System.out.println("\n========== INGESTION COMPLETE ==========");
     }
 
     // ─────────────────────────────────────────────
-    // PRODUCER
+    // PRODUCER (ONLY PARSE + STORE)
     // ─────────────────────────────────────────────
     private static void processFile(String fileName, SourceType type) {
 
@@ -63,13 +53,10 @@ public class MainApp {
                 try {
                     IncomingTransaction txn = registry.adapt(type, line);
 
-                    // ✅ store for report
+                    // ✅ STORE ONLY (no queue, no settlement)
                     allTxns.add(txn);
 
-                    // ✅ push to queue
-                    queue.put(txn);
-
-                    System.out.println("→ QUEUED: " + txn.toAuditString());
+                    System.out.println("✔ INGESTED: " + txn.toAuditString());
 
                 } catch (Exception e) {
                     System.err.println("[ERROR][" + type + "] " + e.getMessage());
@@ -82,7 +69,7 @@ public class MainApp {
     }
 
     // ─────────────────────────────────────────────
-    // 🔥 REPORT (LIKE YOUR OLD TRANSACTION REPORT)
+    // FINAL REPORT (DB TEAM WILL USE THIS DATA)
     // ─────────────────────────────────────────────
     private static void listAllIncomingTransactions() {
 
@@ -102,13 +89,13 @@ public class MainApp {
             "======================================================================================================================================");
 
         System.out.printf(
-            "%-20s %-28s %-28s %-12s %12s %-10s %-20s\n",
+            "%-20s %-28s %-28s %-12s %12s %-12s %-20s\n",
             "Ref No",
             "Sender Bank",
             "Receiver Bank",
             "Channel",
             "Amount",
-            "Status",
+            "Txn Status",
             "Txn Time"
         );
 
@@ -118,48 +105,18 @@ public class MainApp {
         for (IncomingTransaction txn : allTxns) {
 
             System.out.printf(
-                "%-20s %-28s %-28s %-12s %12s %-10s %-20s\n",
+                "%-20s %-28s %-28s %-12s %12s %-12s %-20s\n",
                 txn.getSourceRef(),
                 txn.getSenderBankName(),
                 txn.getReceiverBankName(),
                 txn.getChannelCode(),
                 txn.getAmount().toPlainString(),
-                txn.getProcessingStatus(),
+                txn.getTxnStatus(),   // ✅ IMPORTANT (SUCCESS / FAILED / PENDING)
                 txn.getIngestTimestamp().format(formatter)
             );
         }
 
         System.out.println(
             "======================================================================================================================================");
-    }
-
-    // ─────────────────────────────────────────────
-    // CONSUMER (SETTLEMENT)
-    // ─────────────────────────────────────────────
-    private static void startSettlementEngine() {
-
-        System.out.println("\n========== SETTLEMENT ENGINE START ==========");
-
-        while (!queue.isEmpty()) {
-
-            try {
-                IncomingTransaction txn = queue.take();
-
-                if (!txn.isQueueable()) {
-                    System.out.println("⚠ SKIPPED: " + txn.toAuditString());
-                    continue;
-                }
-
-                System.out.println("💰 SETTLING → " + txn.toAuditString());
-
-                // future:
-                // txn.setProcessingStatus(ProcessingStatus.PROCESSED);
-
-            } catch (Exception e) {
-                System.err.println("Settlement error → " + e.getMessage());
-            }
-        }
-
-        System.out.println("========== SETTLEMENT COMPLETE ==========");
     }
 }

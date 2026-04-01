@@ -6,6 +6,8 @@
 :59:JANE DOE
 :70:Invoice Payment
 :71A:SHA
+:STATUS:FAILED
+
 
 :20:SWIFT-REF-002
 :52A:HDFCINBB
@@ -15,3 +17,4 @@
 :59:BOB
 :70:Consulting Fee
 :71A:OUR
+:STATUS:SUCCESS

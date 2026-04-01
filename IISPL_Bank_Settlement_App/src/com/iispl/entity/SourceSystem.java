@@ -49,7 +49,11 @@ public class SourceSystem extends BaseEntity {
 	private int timeoutSeconds; // connection + read timeout (default: 30)
 	private int maxRetries; // max retry attempts on transient error (default: 3)
 	private int retryDelaySeconds; // seconds between retries (default: 5)
-
+	// 🔥 STATUS MAPPING SUPPORT
+	private boolean supportsTxnStatus = true;
+	private String successValue = "SUCCESS";
+	private String failureValue = "FAILED";
+	private String pendingValue = "PENDING";
 	// ── Operational limits (RBI / business rules) ─────────────────────────────
 	private long dailyTxnLimit; // 0 = unlimited; >0 = max txns per day
 	private long dailyTxnCount; // incremented on each success; reset at midnight
@@ -403,6 +407,18 @@ public class SourceSystem extends BaseEntity {
 
 	public void setSupportTeam(String v) {
 		this.supportTeam = v;
+	}
+
+	public String getSuccessValue() {
+		return successValue;
+	}
+
+	public String getFailureValue() {
+		return failureValue;
+	}
+
+	public String getPendingValue() {
+		return pendingValue;
 	}
 
 	// ── toString ──────────────────────────────────────────────────────────────
