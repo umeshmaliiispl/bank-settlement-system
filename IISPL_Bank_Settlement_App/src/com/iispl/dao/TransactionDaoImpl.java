@@ -72,9 +72,7 @@ public class TransactionDaoImpl implements TransactionDao  {
             throw new RuntimeException(e);
         }
 
-        return transactionList
-        		
-        		;
+        return transactionList;
     }
 
     // DELETE
