@@ -2,108 +2,75 @@ package com.iispl.dao;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 import com.iispl.config.DatabaseConfig;
-import com.iispl.entity.Transaction;
+import com.iispl.entity.IncomingTransaction;
 
-public class TransactionDaoImpl implements TransactionDao  {
+public class TransactionDaoImpl implements TransactionDao{
 
-    // CREATE
-    public void save(Transaction transaction) {
- 
-    	String sql = "INSERT INTO transaction(account_id, type, amount) VALUES (?,?,?)";
+    public void save(IncomingTransaction txn) {
 
-        try (Connection connection = DatabaseConfig.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+        String sql = "INSERT INTO incoming_transaction (" +
+                "source_system_id, source_ref, raw_payload, normalized_payload, " +
+                "txn_type, amount, gross_amount, fee_amount, currency, value_date, " +
+                "txn_status, processing_status, sender_ifsc, receiver_ifsc, " +
+                "sender_bank_name, receiver_bank_name, sender_bic, receiver_bic, " +
+                "partner_name, merchant_id, channel_code, checksum, error_message" +
+                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
-            preparedStatement.setLong(1, transaction.getAccountId());
-            preparedStatement.setString(2, transaction.getType());
-            preparedStatement.setBigDecimal(3, transaction.getAmount());
+        try (Connection con = DatabaseConfig.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
 
-            preparedStatement.executeUpdate();
+            
+            ps.setLong(1, getSourceSystemId(txn.getChannelCode()));
+            
+//            ps.setLong(1, 1); // ✅ assume CBS = 1, NEFT = 2 etc.
+////            ps.setLong(1, txn.getSourceSystem().getId()); // ⚠️ ensure ID exists
+            ps.setString(2, txn.getSourceRef());
+            ps.setString(3, txn.getRawPayload());
+            ps.setString(4, txn.getNormalizedPayload());
 
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+            ps.setString(5, txn.getTxnType().name());
+            ps.setBigDecimal(6, txn.getAmount());
+            ps.setBigDecimal(7, txn.getGrossAmount());
+            ps.setBigDecimal(8, txn.getFeeAmount());
+            ps.setString(9, txn.getCurrency());
+            ps.setObject(10, txn.getValueDate());
 
-    // READ BY ID
-    public Optional<Transaction> findById(Long transactionId) {
-        String sql = "SELECT * FROM transaction WHERE id=?";
+            ps.setString(11, txn.getTxnStatus().name());
+            ps.setString(12, txn.getProcessingStatus().name());
 
-        try (Connection connection = DatabaseConfig.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            ps.setString(13, txn.getSenderIfsc());
+            ps.setString(14, txn.getReceiverIfsc());
 
-            preparedStatement.setLong(1, transactionId);
-            ResultSet resultSet = preparedStatement.executeQuery();
+            ps.setString(15, txn.getSenderBankName());
+            ps.setString(16, txn.getReceiverBankName());
 
-            if (resultSet.next()) {
-                Transaction transaction = mapRow(resultSet);
-                return Optional.of(transaction);
-            }
+            ps.setString(17, txn.getSenderBic());
+            ps.setString(18, txn.getReceiverBic());
 
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+            ps.setString(19, txn.getPartnerName());
+            ps.setString(20, txn.getMerchantId());
 
-        return Optional.empty();
-    }
+            ps.setString(21, txn.getChannelCode());
+            ps.setString(22, txn.getChecksum());
+            ps.setString(23, txn.getErrorMessage());
 
-    // READ ALL
-    public List<Transaction> findAll() {
-        List<Transaction> transactionList = new ArrayList<>();
-        String sql = "SELECT * FROM transaction";
-
-        try (Connection connection = DatabaseConfig.getConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql)) {
-
-            while (resultSet.next()) {
-            	transactionList.add(mapRow(resultSet));
-            }
+            ps.executeUpdate();
 
         } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        return transactionList
-        		
-        		;
-    }
-
-    // DELETE
-    public void delete(Long transactionId) {
-        String sql = "DELETE FROM transaction WHERE id=?";
-
-        try (Connection connection = DatabaseConfig.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            preparedStatement.setLong(1, transactionId);
-            preparedStatement.executeUpdate();
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("DB Insert Failed", e);
         }
     }
-
-    // SIMPLE MAPPER (returns a basic Transaction)
-    private Transaction mapRow(ResultSet resultSet) throws SQLException {
-        Transaction transaction = new Transaction() {
-            @Override
-            public void execute(com.iispl.entity.Account account) {}
-        };
-
-        transaction.setId(resultSet.getLong("id"));
-        transaction.setAccountId(resultSet.getLong("account_id"));
-        transaction.setType(resultSet.getString("type"));
-        transaction.setAmount(resultSet.getBigDecimal("amount"));
-
-        return transaction;
-    }
+    private Long getSourceSystemId(String channel) {
+        switch (channel) {
+            case "CBS": return 1L;
+            case "NEFT": return 2L;
+            case "UPI": return 3L;
+            case "RTGS": return 4L;
+            case "SWIFT": return 5L;
+            case "FINTECH": return 6L;
+            default: return 1L;
+        }
+    }   
 }

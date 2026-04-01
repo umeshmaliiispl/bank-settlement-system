@@ -1,6 +1,7 @@
 package com.iispl.utility;
 
 import com.iispl.adaptor.AdapterRegistry;
+import com.iispl.dao.TransactionDaoImpl;   // ✅ YOUR DAO
 import com.iispl.entity.IncomingTransaction;
 import com.iispl.enums.SourceType;
 
@@ -14,6 +15,9 @@ public class MainApp {
 
     private static final AdapterRegistry registry = AdapterRegistry.getInstance();
 
+    // ✅ DB DAO
+    private static final TransactionDaoImpl dao = new TransactionDaoImpl();
+
     private static final List<IncomingTransaction> allTxns =
             new ArrayList<>();
 
@@ -21,19 +25,17 @@ public class MainApp {
 
         System.out.println("========== IISPL INGESTION PIPELINE ==========");
 
-        // ✅ ONLY INGESTION
         processFile("cbs_transactions.txt", SourceType.CBS);
         processFile("neft_transactions.txt", SourceType.NEFT);
         processFile("upi_transactions.txt", SourceType.UPI);
 
-        // ✅ REPORT (FINAL OUTPUT FOR DB TEAM)
         listAllIncomingTransactions();
 
         System.out.println("\n========== INGESTION COMPLETE ==========");
     }
 
     // ─────────────────────────────────────────────
-    // PRODUCER (ONLY PARSE + STORE)
+    // PRODUCER (PARSE + SAVE TO DB)
     // ─────────────────────────────────────────────
     private static void processFile(String fileName, SourceType type) {
 
@@ -53,10 +55,13 @@ public class MainApp {
                 try {
                     IncomingTransaction txn = registry.adapt(type, line);
 
-                    // ✅ STORE ONLY (no queue, no settlement)
+                    // ✅ SAVE TO DB
+                    dao.save(txn);
+
+                    // ✅ STORE IN MEMORY (for report)
                     allTxns.add(txn);
 
-                    System.out.println("✔ INGESTED: " + txn.toAuditString());
+                    System.out.println("✔ INGESTED + SAVED: " + txn.toAuditString());
 
                 } catch (Exception e) {
                     System.err.println("[ERROR][" + type + "] " + e.getMessage());
@@ -69,7 +74,7 @@ public class MainApp {
     }
 
     // ─────────────────────────────────────────────
-    // FINAL REPORT (DB TEAM WILL USE THIS DATA)
+    // FINAL REPORT
     // ─────────────────────────────────────────────
     private static void listAllIncomingTransactions() {
 
@@ -111,7 +116,7 @@ public class MainApp {
                 txn.getReceiverBankName(),
                 txn.getChannelCode(),
                 txn.getAmount().toPlainString(),
-                txn.getTxnStatus(),   // ✅ IMPORTANT (SUCCESS / FAILED / PENDING)
+                txn.getTxnStatus(),
                 txn.getIngestTimestamp().format(formatter)
             );
         }
