@@ -174,21 +174,77 @@ CREATE TABLE exchange_rate (
     base_currency       CHAR(3)         NOT NULL,
     quote_currency      CHAR(3)         NOT NULL,
     rate            
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+  
+-- 🔥 ADD NEW COLUMNS TO existing incoming_transaction
+
+ALTER TABLE incoming_transaction
+ADD COLUMN channel_code VARCHAR(20),
+
+ADD COLUMN checksum VARCHAR(100),
+
+ADD COLUMN gross_amount NUMERIC(20,4),
+ADD COLUMN fee_amount NUMERIC(20,4),
+
+-- 🔥 MOST IMPORTANT (Transaction Status)
+ADD COLUMN txn_status VARCHAR(20) DEFAULT 'SUCCESS',
+
+-- BANK DETAILS
+ADD COLUMN sender_ifsc VARCHAR(20),
+ADD COLUMN receiver_ifsc VARCHAR(20),
+ADD COLUMN sender_bank_name VARCHAR(100),
+ADD COLUMN receiver_bank_name VARCHAR(100),
+
+-- SWIFT SUPPORT
+ADD COLUMN sender_bic VARCHAR(20),
+ADD COLUMN receiver_bic VARCHAR(20),
+
+-- FINTECH SUPPORT
+ADD COLUMN partner_name VARCHAR(100),
+ADD COLUMN merchant_id VARCHAR(50),
+
+-- CONTROL
+ADD COLUMN priority INT DEFAULT 5,
+ADD COLUMN error_message TEXT;
+
+
+
+
+
+-- First update existing rows (important)
+UPDATE incoming_transaction
+SET txn_status = 'SUCCESS'
+WHERE txn_status IS NULL;
+
+-- Then enforce NOT NULL
+ALTER TABLE incoming_transaction
+ALTER COLUMN txn_status SET NOT NULL;
+
+
+
+CREATE INDEX idx_txn_status ON incoming_transaction(txn_status);
+CREATE INDEX idx_channel_code ON incoming_transaction(channel_code);
+CREATE INDEX idx_value_date ON incoming_transaction(value_date);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
