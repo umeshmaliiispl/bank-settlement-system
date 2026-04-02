@@ -2,9 +2,15 @@ package com.iispl.dao;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.iispl.config.DatabaseConfig;
 import com.iispl.entity.IncomingTransaction;
+import com.iispl.enums.ProcessingStatus;
+import com.iispl.enums.TransactionStatus;
+import com.iispl.enums.TransactionType;
 
 public class TransactionDaoImpl implements TransactionDao{
 
@@ -62,6 +68,60 @@ public class TransactionDaoImpl implements TransactionDao{
             throw new RuntimeException("DB Insert Failed", e);
         }
     }
+    
+    public static List<IncomingTransaction> getAllTransactions() {
+
+        String sql = "SELECT * FROM incoming_transaction";
+        List<IncomingTransaction> transactions = new ArrayList<>();
+
+        try (Connection con = DatabaseConfig.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+
+                IncomingTransaction txn = new IncomingTransaction();
+
+                txn.setSourceRef(rs.getString("source_ref"));
+                txn.setRawPayload(rs.getString("raw_payload"));
+                txn.setNormalizedPayload(rs.getString("normalized_payload"));
+
+                txn.setTxnType(TransactionType.valueOf(rs.getString("txn_type")));
+                txn.setAmount(rs.getBigDecimal("amount"));
+                txn.setGrossAmount(rs.getBigDecimal("gross_amount"));
+                txn.setFeeAmount(rs.getBigDecimal("fee_amount"));
+                txn.setCurrency(rs.getString("currency"));
+                txn.setIngestTimestamp(rs.getTimestamp("ingest_timestamp").toLocalDateTime());
+                
+                txn.setTxnStatus(TransactionStatus.valueOf(rs.getString("txn_status")));
+                txn.setProcessingStatus(ProcessingStatus.valueOf(rs.getString("processing_status")));
+
+                txn.setSenderIfsc(rs.getString("sender_ifsc"));
+                txn.setReceiverIfsc(rs.getString("receiver_ifsc"));
+
+                txn.setSenderBankName(rs.getString("sender_bank_name"));
+                txn.setReceiverBankName(rs.getString("receiver_bank_name"));
+
+                txn.setSenderBic(rs.getString("sender_bic"));
+                txn.setReceiverBic(rs.getString("receiver_bic"));
+
+                txn.setPartnerName(rs.getString("partner_name"));
+                txn.setMerchantId(rs.getString("merchant_id"));
+
+                txn.setChannelCode(rs.getString("channel_code"));
+                txn.setChecksum(rs.getString("checksum"));
+                txn.setErrorMessage(rs.getString("error_message"));
+
+                transactions.add(txn);
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("DB Fetch Failed", e);
+        }
+
+        return transactions;
+    }
+    
     private Long getSourceSystemId(String channel) {
         switch (channel) {
             case "CBS": return 1L;

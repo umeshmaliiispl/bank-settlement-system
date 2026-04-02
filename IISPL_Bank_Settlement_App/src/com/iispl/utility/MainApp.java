@@ -59,7 +59,7 @@ public class MainApp {
                     dao.save(txn);
 
                     // ✅ STORE IN MEMORY (for report)
-                    allTxns.add(txn);
+                    //allTxns.add(txn);
 
                     System.out.println("✔ INGESTED + SAVED: " + txn.toAuditString());
 
@@ -77,14 +77,16 @@ public class MainApp {
     // FINAL REPORT
     // ─────────────────────────────────────────────
     private static void listAllIncomingTransactions() {
+    	
+    	List<IncomingTransaction> transactions=TransactionDaoImpl.getAllTransactions();
 
-        if (allTxns.isEmpty()) {
+        if (transactions.isEmpty()) {
             System.out.println("\n⚠ No transactions available.");
             return;
         }
 
         DateTimeFormatter formatter =
-                DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+                DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss a");
 
         System.out.println(
             "\n======================================================================================================================================");
@@ -94,7 +96,7 @@ public class MainApp {
             "======================================================================================================================================");
 
         System.out.printf(
-            "%-20s %-28s %-28s %-12s %12s %-12s %-20s\n",
+            "%-20s %-28s %-28s %-12s %14s %-14s %-20s\n",
             "Ref No",
             "Sender Bank",
             "Receiver Bank",
@@ -107,10 +109,10 @@ public class MainApp {
         System.out.println(
             "--------------------------------------------------------------------------------------------------------------------------------------");
 
-        for (IncomingTransaction txn : allTxns) {
+        for (IncomingTransaction txn : transactions) {
 
             System.out.printf(
-                "%-20s %-28s %-28s %-12s %12s %-12s %-20s\n",
+                "%-20s %-28s %-28s %-12s %14s %-14s %-20s\n",
                 txn.getSourceRef(),
                 txn.getSenderBankName(),
                 txn.getReceiverBankName(),
