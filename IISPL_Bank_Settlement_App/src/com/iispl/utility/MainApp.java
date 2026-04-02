@@ -96,7 +96,7 @@ public class MainApp {
             "======================================================================================================================================");
 
         System.out.printf(
-            "%-20s %-28s %-28s %-12s %12s %-12s %-20s\n",
+            "%-20s %-28s %-28s %-12s %14s %-14s %-20s\n",
             "Ref No",
             "Sender Bank",
             "Receiver Bank",
@@ -112,7 +112,7 @@ public class MainApp {
         for (IncomingTransaction txn : transactions) {
 
             System.out.printf(
-                "%-20s %-28s %-28s %-12s %12s %-12s %-20s\n",
+                "%-20s %-28s %-28s %-12s %14s %-14s %-20s\n",
                 txn.getSourceRef(),
                 txn.getSenderBankName(),
                 txn.getReceiverBankName(),
