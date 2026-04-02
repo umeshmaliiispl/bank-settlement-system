@@ -12,7 +12,7 @@ public class IncomingTransaction extends BaseEntity {
 
 	private Long incomingTxnId;
 
-	// SOURCE
+	// SOURCESYstem
 	private SourceSystem sourceSystem;
 	private String sourceRef;
 	private String rawPayload;
