@@ -46,19 +46,19 @@ public class SettlementInstruction extends BaseEntity {
 		this.valueDate = valueDate;
 	}
 
-	public long getSenderBankId() {
+	public String getSenderBankId() {
 		return senderBankId;
 	}
 
-	public void setSenderBankId(long senderBankId) {
+	public void setSenderBankId(String senderBankId) {
 		this.senderBankId = senderBankId;
 	}
 
-	public long getReceiverBankId() {
+	public String getReceiverBankId() {
 		return receiverBankId;
 	}
 
-	public void setReceiverBankId(long receiverBankId) {
+	public void setReceiverBankId(String receiverBankId) {
 		this.receiverBankId = receiverBankId;
 	}
 
@@ -71,7 +71,7 @@ public class SettlementInstruction extends BaseEntity {
 	}
 
 	public SettlementInstruction(String instructionId, long transactionId, ChannelType channel, int priority,
-			LocalDate valueDate, long senderBankId, long receiverBankId, InstructionStatus instructionStatus) {
+			LocalDate valueDate, String senderBankId, String receiverBankId, InstructionStatus instructionStatus) {
 		super();
 		this.instructionId = instructionId;
 		this.transactionId = transactionId;
@@ -90,8 +90,8 @@ public class SettlementInstruction extends BaseEntity {
 	private int priority;
 	private LocalDate valueDate;
 
-	private long senderBankId;
-	private long receiverBankId;
+	private String senderBankId;
+	private String receiverBankId;
 
 	private InstructionStatus instructionStatus;
 

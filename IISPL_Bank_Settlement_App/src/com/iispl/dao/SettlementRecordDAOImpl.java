@@ -16,7 +16,7 @@ public class SettlementRecordDAOImpl implements SettlementRecordDAO {
 
 			ps.setString(1, record.getBatchId());
 			ps.setLong(2, record.getIncomingTxnId());
-			ps.setDouble(3, record.getSettledAmount());
+			ps.setBigDecimal(3, record.getSettledAmount());
 			ps.setString(4, record.getSettledStatus().name());
 
 			ps.executeUpdate();
