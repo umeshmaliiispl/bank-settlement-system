@@ -2,11 +2,14 @@ package com.iispl.adaptor;
 
 import java.math.BigDecimal;
 import java.security.MessageDigest;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import com.iispl.entity.IncomingTransaction;
 import com.iispl.entity.SourceSystem;
-import com.iispl.enums.*;
+import com.iispl.enums.ProcessingStatus;
+import com.iispl.enums.SourceType;
+import com.iispl.enums.TransactionStatus;
+import com.iispl.enums.TransactionType;
 import com.iispl.exception.IngestionException;
 import com.iispl.intefaces.TransactionAdapter;
 import com.iispl.validation.PayloadValidator;
@@ -14,7 +17,7 @@ import com.iispl.validation.PayloadValidator;
 public class NeftUpiAdapter implements TransactionAdapter {
 
     private static final SourceSystem NEFT_SOURCE = SourceSystem.NEFT();
-    private static final SourceSystem UPI_SOURCE = SourceSystem.UPI();
+    private static final SourceSystem UPI_SOURCE  = SourceSystem.UPI();
 
     @Override
     public IncomingTransaction adapt(String rawPayload) {
@@ -29,18 +32,18 @@ public class NeftUpiAdapter implements TransactionAdapter {
             );
         }
 
+        // ── Parse CSV ─────────────────────────
         String[] f = rawPayload.split(",", -1);
 
         boolean isUpi = f[0].toUpperCase().startsWith("UPI-");
         SourceType sourceType = isUpi ? SourceType.UPI : SourceType.NEFT;
 
-        // ── Format check (8 columns) ──────────
-        if (f.length < 8) {
+        if (f.length < 10) {
             throw new IngestionException(
                     IngestionException.ERR_INVALID_FORMAT,
                     sourceType,
                     rawPayload,
-                    "Expected 8 CSV fields (including status), got: " + f.length
+                    "Expected 10 CSV fields, got: " + f.length
             );
         }
 
@@ -56,63 +59,59 @@ public class NeftUpiAdapter implements TransactionAdapter {
         // ── Core Mapping ─────────────────────
         txn.setSourceRef(trim(f[0]));
 
+        txn.setTxnType(
+                TransactionType.valueOf(trim(f[1]).toUpperCase())
+        );
+
+        txn.setSenderCustomerId(trim(f[2]));
+        txn.setSenderAccount(trim(f[3]));
+
+        txn.setReceiverCustomerId(trim(f[4]));
+        txn.setReceiverAccount(trim(f[5]));
+
+        txn.setSenderIfsc(txn.getSenderAccount());
+        txn.setReceiverIfsc(txn.getReceiverAccount());
+
+        // ── Amount ───────────────────────────
+        txn.setAmount(new BigDecimal(trim(f[6])));
+        txn.setGrossAmount(txn.getAmount());
+        txn.setFeeAmount(BigDecimal.ZERO);
+
+        txn.setCurrency(trim(f[7]).toUpperCase());
+
+        // 🔥 FIXED: STORE FULL TIMESTAMP
+        LocalDateTime txnTime;
+
         try {
-            txn.setTxnType(TransactionType.valueOf(trim(f[1]).toUpperCase()));
+            txnTime = LocalDateTime.parse(trim(f[8]).replace(" ", "T"));
         } catch (Exception e) {
             throw new IngestionException(
                     IngestionException.ERR_INVALID_FORMAT,
                     sourceType,
                     rawPayload,
-                    "Invalid TXN_TYPE: " + f[1]
+                    "Invalid timestamp: " + f[8]
             );
         }
 
-        txn.setSenderIfsc(trim(f[2]).toUpperCase());
-        txn.setReceiverIfsc(trim(f[3]).toUpperCase());
+        txn.setValueDate(txnTime); // ✅ FULL LocalDateTime
 
-        try {
-            txn.setAmount(new BigDecimal(trim(f[4])));
-            txn.setGrossAmount(txn.getAmount());
-            txn.setFeeAmount(BigDecimal.ZERO);
-        } catch (Exception e) {
-            throw new IngestionException(
-                    IngestionException.ERR_INVALID_FORMAT,
-                    sourceType,
-                    rawPayload,
-                    "Invalid AMOUNT: " + f[4]
-            );
-        }
-
-        txn.setCurrency(trim(f[5]).toUpperCase());
-
-        try {
-            txn.setValueDate(LocalDate.parse(trim(f[6])));
-        } catch (Exception e) {
-            throw new IngestionException(
-                    IngestionException.ERR_INVALID_FORMAT,
-                    sourceType,
-                    rawPayload,
-                    "Invalid VALUE_DATE: " + f[6]
-            );
-        }
-
-        // 🔥 STATUS (SAFE)
-        try {
-            txn.setTxnStatus(
-                    TransactionStatus.valueOf(trim(f[7]).toUpperCase())
-            );
-        } catch (Exception e) {
-            throw new IngestionException(
-                    IngestionException.ERR_INVALID_FORMAT,
-                    sourceType,
-                    rawPayload,
-                    "Invalid STATUS: " + f[7]
-            );
-        }
+        // ── STATUS ───────────────────────────
+        txn.setTxnStatus(
+                TransactionStatus.valueOf(trim(f[9]).toUpperCase())
+        );
 
         // ── Bank Names ───────────────────────
-        txn.setSenderBankName(BankNameResolver.fromIfsc(txn.getSenderIfsc()));
-        txn.setReceiverBankName(BankNameResolver.fromIfsc(txn.getReceiverIfsc()));
+        txn.setSenderBankName(
+                BankNameResolver.fromIfsc(txn.getSenderIfsc()));
+
+        txn.setReceiverBankName(
+                BankNameResolver.fromIfsc(txn.getReceiverIfsc()));
+
+        // ── Priority ─────────────────────────
+        txn.setPriority(isUpi ? 6 : 4);
+
+        // ── Normalized Payload ───────────────
+        txn.setNormalizedPayload(buildNormalized(txn));
 
         // ── Validation ───────────────────────
         PayloadValidator.ValidationResult vr =
@@ -123,28 +122,70 @@ public class NeftUpiAdapter implements TransactionAdapter {
             txn.setErrorMessage(vr.getErrorSummary());
             System.err.println("  [" + txn.getChannelCode() + "-ADAPTER][FAIL] " + vr);
         } else {
-            txn.setProcessingStatus(
-                    txn.getTxnStatus() == TransactionStatus.SUCCESS
-                            ? ProcessingStatus.QUEUED
-                            : ProcessingStatus.VALIDATED
-            );
+            txn.setProcessingStatus(ProcessingStatus.VALIDATED);
+
+            if (txn.getTxnStatus() == TransactionStatus.SUCCESS) {
+                txn.setProcessingStatus(ProcessingStatus.QUEUED);
+
+                if (isUpi) {
+                    UPI_SOURCE.recordSuccess();
+                } else {
+                    NEFT_SOURCE.recordSuccess();
+                }
+            }
         }
 
-        // 🔥 Audit log
-        System.out.println("  [" + txn.getChannelCode() + "-ADAPTER] " + txn.toAuditString());
-
+        System.out.printf(
+        	    "[ADAPTER ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | STATUS=%-8s/%-10s%n",
+        	    Thread.currentThread().getName(),
+        	    safe(txn.getChannelCode()),
+        	    safe(txn.getSourceRef()),
+        	    formatAmount(txn.getAmount()),
+        	    safe(txn.getCurrency()),
+        	    safe(txn.getTxnStatus()),
+        	    safe(txn.getProcessingStatus())
+        	);
+        
         return txn;
     }
+    
 
+	private String formatAmount(java.math.BigDecimal amt) {
+		if (amt == null)
+			return "0.00";
+		return String.format("%,.2f", amt);
+	}
+
+	private String safe(Object val) {
+		return val == null ? "N/A" : val.toString();
+	}
     @Override
     public SourceType getSourceType() {
         return SourceType.NEFT;
     }
 
     // ─────────────────────────────
+    // NORMALIZED FORMAT
+    // ─────────────────────────────
+    private String buildNormalized(IncomingTransaction txn) {
+        return "{"
+                + "\"txn_id\":\"" + txn.getSourceRef() + "\","
+                + "\"channel\":\"" + txn.getChannelCode() + "\","
+                + "\"txn_type\":\"" + txn.getTxnType() + "\","
+                + "\"sender_cid\":\"" + txn.getSenderCustomerId() + "\","
+                + "\"sender_acc\":\"" + txn.getSenderAccount() + "\","
+                + "\"receiver_cid\":\"" + txn.getReceiverCustomerId() + "\","
+                + "\"receiver_acc\":\"" + txn.getReceiverAccount() + "\","
+                + "\"amount\":" + txn.getAmount() + ","
+                + "\"currency\":\"" + txn.getCurrency() + "\","
+                + "\"txn_timestamp\":\"" + txn.getValueDate() + "\","
+                + "\"status\":\"" + txn.getTxnStatus() + "\""
+                + "}";
+    }
+
+    // ─────────────────────────────
     // HELPERS
     // ─────────────────────────────
-
     private static String trim(String s) {
         return s == null ? "" : s.trim();
     }

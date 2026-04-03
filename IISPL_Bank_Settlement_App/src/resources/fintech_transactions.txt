@@ -1,2 +1,3 @@
-{"partner_ref":"RPY-001","partner_name":"Razorpay","payment_type":"CREDIT","gross_amount":"10000.00","fee_amount":"200.00","net_amount":"9800.00","currency":"INR","settlement_date":"2025-07-18","merchant_id":"M001","status":"SUCCESS"}
-{"partner_ref":"PAYTM-002","partner_name":"Paytm","payment_type":"DEBIT","gross_amount":"5000.00","fee_amount":"100.00","net_amount":"4900.00","currency":"INR","settlement_date":"2025-07-18","merchant_id":"M002","status":"SUCCESS"}
+{"txn_id":"FPY-006","channel":"FINTECH","txn_type":"CREDIT","sender_cid":"CID1003","sender_acc_no":"AXIS0001122","receiver_cid":"CID3001","receiver_acc_no":"IISPL_ACC","amount":"12000.00","currency":"INR","txn_timestamp":"2026-03-25 14:10:00","status":"SUCCESS","remarks":"PhonePe Fee:240"}
+
+{"txn_id":"GPAY-007","channel":"FINTECH","txn_type":"DEBIT","sender_cid":"CID1004","sender_acc_no":"HDFC0005678","receiver_cid":"CID3001","receiver_acc_no":"IISPL_ACC","amount":"7000.00","currency":"INR","txn_timestamp":"2026-03-25 15:25:30","status":"SUCCESS","remarks":"GooglePay Fee:140"}

@@ -2,48 +2,72 @@ package com.iispl.entity;
 
 import java.math.BigDecimal;
 
-public class Account {
+import com.iispl.enums.AccountStatus;
+import com.iispl.enums.AccountType;
 
-    private Long id;
-    private String accountNumber;
-    private String accountName;
-    private BigDecimal balance;
+/**
+ * Account Entity (Used for lookup + settlement)
+ */
+public class Account extends BaseEntity {
 
-    public Account(Long id, String accountNumber, String accountName, BigDecimal balance) {
+	private String accountNumber; // Used for lookup
+	private String ifscCode;
+	private String bankName;
+
+	private String customerId; // FK → Customer.customerId
+
+	private AccountType accountType;
+	private BigDecimal balance;
+	private String currency;
+
+	private AccountStatus accountStatus;
+
+	public Account() {
 		super();
-		this.id = id;
-		this.accountNumber = accountNumber;
-		this.accountName = accountName;
-		this.balance = balance;
 	}
 
-	public Account() {}
+	public Account(String createdBy, String accountNumber, String ifscCode, String bankName, String customerId,
+			AccountType accountType, BigDecimal balance, String currency, AccountStatus accountStatus) {
 
-    public Long getId() { 
-    	return id; 
-    	}
-    public void setId(Long id) {
-    	this.id = id; 
-    	}
+		super(createdBy);
+		this.accountNumber = accountNumber;
+		this.ifscCode = ifscCode;
+		this.bankName = bankName;
+		this.customerId = customerId;
+		this.accountType = accountType;
+		this.balance = balance;
+		this.currency = currency;
+		this.accountStatus = accountStatus;
+	}
 
-    public String getAccountNumber() {
-    	return accountNumber;
-    	}
-    public void setAccountNumber(String accountNumber) { 
-    	this.accountNumber = accountNumber; 
-    	}
+	// Business Methods
+	public synchronized void credit(BigDecimal amount) {
+		this.balance = this.balance.add(amount);
+		markUpdated();
+	}
 
-    public String getAccountName() {
-    	return accountName;
-    	}
-    public void setAccountName(String accountName) { 
-    	this.accountName = accountName; 
-    	}
+	public synchronized void debit(BigDecimal amount) {
+		if (this.balance.compareTo(amount) < 0) {
+			throw new RuntimeException("Insufficient Balance");
+		}
+		this.balance = this.balance.subtract(amount);
+		markUpdated();
+	}
 
-    public BigDecimal getBalance() {
-    	return balance; 
-    	}
-    public void setBalance(BigDecimal balance) {
-    	this.balance = balance;
-    	}
+	// Getters
+	public String getAccountNumber() {
+		return accountNumber;
+	}
+
+	public String getCustomerId() {
+		return customerId;
+	}
+
+	public BigDecimal getBalance() {
+		return balance;
+	}
+
+	public AccountStatus getAccountStatus() {
+		return accountStatus;
+	}
 }

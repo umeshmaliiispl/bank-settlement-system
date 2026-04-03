@@ -1,31 +1,47 @@
 package com.iispl.entity;
 
-public class Customer {
+import java.util.List;
 
-    private Long id;
-    private String name;
+/**
+ * Customer Entity (Master Data)
+ */
+public class Customer extends BaseEntity {
 
-    public Customer() {}
-    
-	public Customer(Long id, String name) {
-		super();
-		this.id = id;
-		this.name = name;
-	}
+    private String customerId;      // CID (Business Key)
+    private String fullName;
 
-    public Long getId() { 
-    	return id; 
-    	}
-    public void setId(Long id) {
-    	this.id = id;
-    	}
+    private String kycStatus;       // VERIFIED / PENDING
+    private String customerStatus;  // ACTIVE / INACTIVE
 
-    public String getName() {
-    	return name; 
-    	}
-    public void setName(String name) {
-    	this.name = name; 
-    	}
+    // One-to-Many relationship
+    private List<Account> accounts;
 
+    public Customer() {
+        super();
+    }
 
+    public Customer(String createdBy, String customerId, String fullName,
+                    String kycStatus, String customerStatus) {
+        super(createdBy);
+        this.customerId = customerId;
+        this.fullName = fullName;
+        this.kycStatus = kycStatus;
+        this.customerStatus = customerStatus;
+    }
+
+    // Getters & Setters
+    public String getCustomerId() { return customerId; }
+    public void setCustomerId(String customerId) { this.customerId = customerId; }
+
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+
+    public String getKycStatus() { return kycStatus; }
+    public void setKycStatus(String kycStatus) { this.kycStatus = kycStatus; }
+
+    public String getCustomerStatus() { return customerStatus; }
+    public void setCustomerStatus(String customerStatus) { this.customerStatus = customerStatus; }
+
+    public List<Account> getAccounts() { return accounts; }
+    public void setAccounts(List<Account> accounts) { this.accounts = accounts; }
 }

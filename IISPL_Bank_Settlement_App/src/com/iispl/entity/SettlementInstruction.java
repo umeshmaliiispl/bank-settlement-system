@@ -1,10 +1,25 @@
 package com.iispl.entity;
 
 import java.time.LocalDate;
+
 import com.iispl.enums.ChannelType;
 import com.iispl.enums.InstructionStatus;
 
-public class SettlementInstruction extends BaseEntity {
+public class SettlementInstruction {
+
+	private String instructionId;
+	private String fromBank;
+	private String toBank;
+	private double amount;
+
+	private ChannelType channel;
+	private InstructionStatus instructionStatus;
+
+	private LocalDate valueDate;
+
+	// ─────────────────────────────────────────────
+	// GETTERS & SETTERS
+	// ─────────────────────────────────────────────
 
 	public String getInstructionId() {
 		return instructionId;
@@ -14,12 +29,28 @@ public class SettlementInstruction extends BaseEntity {
 		this.instructionId = instructionId;
 	}
 
-	public long getTransactionId() {
-		return transactionId;
+	public String getFromBank() {
+		return fromBank;
 	}
 
-	public void setTransactionId(long transactionId) {
-		this.transactionId = transactionId;
+	public void setFromBank(String fromBank) {
+		this.fromBank = fromBank;
+	}
+
+	public String getToBank() {
+		return toBank;
+	}
+
+	public void setToBank(String toBank) {
+		this.toBank = toBank;
+	}
+
+	public double getAmount() {
+		return amount;
+	}
+
+	public void setAmount(double amount) {
+		this.amount = amount;
 	}
 
 	public ChannelType getChannel() {
@@ -30,12 +61,12 @@ public class SettlementInstruction extends BaseEntity {
 		this.channel = channel;
 	}
 
-	public int getPriority() {
-		return priority;
+	public InstructionStatus getInstructionStatus() {
+		return instructionStatus;
 	}
 
-	public void setPriority(int priority) {
-		this.priority = priority;
+	public void setInstructionStatus(InstructionStatus instructionStatus) {
+		this.instructionStatus = instructionStatus;
 	}
 
 	public LocalDate getValueDate() {
@@ -45,54 +76,4 @@ public class SettlementInstruction extends BaseEntity {
 	public void setValueDate(LocalDate valueDate) {
 		this.valueDate = valueDate;
 	}
-
-	public long getSenderBankId() {
-		return senderBankId;
-	}
-
-	public void setSenderBankId(long senderBankId) {
-		this.senderBankId = senderBankId;
-	}
-
-	public long getReceiverBankId() {
-		return receiverBankId;
-	}
-
-	public void setReceiverBankId(long receiverBankId) {
-		this.receiverBankId = receiverBankId;
-	}
-
-	public InstructionStatus getInstructionStatus() {
-		return instructionStatus;
-	}
-
-	public void setInstructionStatus(InstructionStatus instructionStatus) {
-		this.instructionStatus = instructionStatus;
-	}
-
-	public SettlementInstruction(String instructionId, long transactionId, ChannelType channel, int priority,
-			LocalDate valueDate, long senderBankId, long receiverBankId, InstructionStatus instructionStatus) {
-		super();
-		this.instructionId = instructionId;
-		this.transactionId = transactionId;
-		this.channel = channel;
-		this.priority = priority;
-		this.valueDate = valueDate;
-		this.senderBankId = senderBankId;
-		this.receiverBankId = receiverBankId;
-		this.instructionStatus = instructionStatus;
-	}
-
-	private String instructionId;
-	private long transactionId;
-
-	private ChannelType channel;
-	private int priority;
-	private LocalDate valueDate;
-
-	private long senderBankId;
-	private long receiverBankId;
-
-	private InstructionStatus instructionStatus;
-
 }

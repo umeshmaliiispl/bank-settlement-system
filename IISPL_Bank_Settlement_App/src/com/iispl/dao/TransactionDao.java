@@ -10,5 +10,7 @@ import java.util.Optional;
 public interface TransactionDao {
 
     public void save(IncomingTransaction txn);
+    public List<IncomingTransaction> findAll();
+    public List<IncomingTransaction> findSuccessfulTransactions();
     
 }

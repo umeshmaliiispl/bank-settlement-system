@@ -1,86 +1,91 @@
 package com.iispl.entity;
 
-import java.time.LocalDate;
 import com.iispl.enums.NetDirection;
 
-public class NettingPosition extends BaseEntity {
+public class NettingPosition {
 
-	public long getCounterpartyBankId() {
-		return counterpartyBankId;
-	}
+    private String bankName;
+    private String currency;
 
-	public void setCounterpartyBankId(long counterpartyBankId) {
-		this.counterpartyBankId = counterpartyBankId;
-	}
+    private double grossDebitAmount;
+    private double grossCreditAmount;
+    private double netAmount;
 
-	public String getCurrency() {
-		return currency;
-	}
+    private NetDirection direction;
 
-	public void setCurrency(String currency) {
-		this.currency = currency;
-	}
+    // ─────────────────────────────────────────────
+    // BUSINESS METHODS
+    // ─────────────────────────────────────────────
 
-	public double getGrossDebitAmount() {
-		return grossDebitAmount;
-	}
+    public void addDebit(double amount) {
+        this.grossDebitAmount += amount;
+    }
 
-	public void setGrossDebitAmount(double grossDebitAmount) {
-		this.grossDebitAmount = grossDebitAmount;
-	}
+    public void addCredit(double amount) {
+        this.grossCreditAmount += amount;
+    }
 
-	public double getGrossCreditAmount() {
-		return grossCreditAmount;
-	}
+    public void calculateNet() {
+        this.netAmount = grossCreditAmount - grossDebitAmount;
 
-	public void setGrossCreditAmount(double grossCreditAmount) {
-		this.grossCreditAmount = grossCreditAmount;
-	}
+        if (netAmount > 0) {
+            direction = NetDirection.NET_CREDIT;
+        } else if (netAmount < 0) {
+            direction = NetDirection.NET_DEBIT;
+        } else {
+            direction = NetDirection.FLAT;
+        }
+    }
 
-	public double getNetAmount() {
-		return netAmount;
-	}
+    // ─────────────────────────────────────────────
+    // GETTERS & SETTERS
+    // ─────────────────────────────────────────────
 
-	public void setNetAmount(double netAmount) {
-		this.netAmount = netAmount;
-	}
+    public String getBankName() {
+        return bankName;
+    }
 
-	public NetDirection getDirection() {
-		return direction;
-	}
+    public void setBankName(String bankName) {
+        this.bankName = bankName;
+    }
 
-	public void setDirection(NetDirection direction) {
-		this.direction = direction;
-	}
+    public String getCurrency() {
+        return currency;
+    }
 
-	public LocalDate getPositionDate() {
-		return positionDate;
-	}
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
 
-	public void setPositionDate(LocalDate positionDate) {
-		this.positionDate = positionDate;
-	}
+    public double getGrossDebitAmount() {
+        return grossDebitAmount;
+    }
 
-	public NettingPosition(long counterpartyBankId, String currency, double grossDebitAmount, double grossCreditAmount,
-			double netAmount, NetDirection direction, LocalDate positionDate) {
-		super();
-		this.counterpartyBankId = counterpartyBankId;
-		this.currency = currency;
-		this.grossDebitAmount = grossDebitAmount;
-		this.grossCreditAmount = grossCreditAmount;
-		this.netAmount = netAmount;
-		this.direction = direction;
-		this.positionDate = positionDate;
-	}
+    public void setGrossDebitAmount(double grossDebitAmount) {
+        this.grossDebitAmount = grossDebitAmount;
+    }
 
-	private long counterpartyBankId;
-	private String currency;
+    public double getGrossCreditAmount() {
+        return grossCreditAmount;
+    }
 
-	private double grossDebitAmount;
-	private double grossCreditAmount;
-	private double netAmount;
+    public void setGrossCreditAmount(double grossCreditAmount) {
+        this.grossCreditAmount = grossCreditAmount;
+    }
 
-	private NetDirection direction;
-	private LocalDate positionDate;
+    public double getNetAmount() {
+        return netAmount;
+    }
 
+    public void setNetAmount(double netAmount) {
+        this.netAmount = netAmount;
+    }
+
+    public NetDirection getDirection() {
+        return direction;
+    }
+
+    public void setDirection(NetDirection direction) {
+        this.direction = direction;
+    }
 }

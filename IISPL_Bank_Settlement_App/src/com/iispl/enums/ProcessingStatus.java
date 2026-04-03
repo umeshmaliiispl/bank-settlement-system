@@ -22,5 +22,6 @@ public enum ProcessingStatus {
     PROCESSING,
     PROCESSED,
     FAILED,
+    FLAGGED,
     DEAD_LETTER
 }
