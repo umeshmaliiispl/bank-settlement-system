@@ -2,7 +2,7 @@ package com.iispl.adaptor;
 
 import java.math.BigDecimal;
 import java.security.MessageDigest;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import com.iispl.entity.IncomingTransaction;
 import com.iispl.entity.SourceSystem;
@@ -21,139 +21,136 @@ public class CbsAdapter implements TransactionAdapter {
     @Override
     public IncomingTransaction adapt(String rawPayload) {
 
-        // ── Guard ─────────────────────────────────────────
-        if (rawPayload == null || rawPayload.trim().isEmpty())
+        if (rawPayload == null || rawPayload.trim().isEmpty()) {
             throw new IngestionException(
-                    IngestionException.ERR_NULL_PAYLOAD,
-                    SourceType.CBS,
-                    rawPayload,
-                    "rawPayload is null or empty");
+                IngestionException.ERR_NULL_PAYLOAD,
+                SourceType.CBS,
+                rawPayload,
+                "rawPayload is null or empty"
+            );
+        }
 
-        // ── Parse pipe-delimited (NOW 8 fields) ───────────
         String[] f = rawPayload.split("\\|", -1);
 
-        if (f.length < 8) {
+        if (f.length < 10) {
             throw new IngestionException(
-                    IngestionException.ERR_INVALID_FORMAT,
-                    SourceType.CBS,  
-                    rawPayload,
-                    "Expected 8 pipe-delimited fields (including status), got: " + f.length
-                            + " | Payload: " + rawPayload
+                IngestionException.ERR_INVALID_FORMAT,
+                SourceType.CBS,
+                rawPayload,
+                "Expected minimum 10 fields, got: " + f.length
             );
         }
 
         IncomingTransaction txn = new IncomingTransaction();
 
-        // ── Source Info ───────────────────────────────────
         txn.setSourceSystem(CBS_SOURCE);
         txn.setChannelCode("CBS");
         txn.setRawPayload(rawPayload);
         txn.setChecksum(sha256(rawPayload));
         txn.setCreatedBy("CBS-ADAPTER");
 
-        // ── Core Mapping ──────────────────────────────────
+        txn.setTxnType(TransactionType.valueOf(trim(f[0]).toUpperCase()));
+
+        txn.setSenderCustomerId(trim(f[1]));
+        txn.setSenderAccount(trim(f[2]));
+
+        txn.setReceiverCustomerId(trim(f[3]));
+        txn.setReceiverAccount(trim(f[4]));
+
+        txn.setSenderIfsc(txn.getSenderAccount());
+        txn.setReceiverIfsc(txn.getReceiverAccount());
+
+        txn.setAmount(new BigDecimal(trim(f[5])));
+        txn.setGrossAmount(txn.getAmount());
+        txn.setFeeAmount(BigDecimal.ZERO);
+
+        txn.setCurrency(trim(f[6]).toUpperCase());
+
+        LocalDateTime ts;
         try {
-            txn.setTxnType(TransactionType.valueOf(trim(f[0]).toUpperCase()));
+            ts = LocalDateTime.parse(trim(f[7]).replace(" ", "T"));
         } catch (Exception e) {
             throw new IngestionException(
-                    IngestionException.ERR_INVALID_FORMAT,
-                    SourceType.CBS,
-                    rawPayload,
-                    "Invalid TXN_TYPE: " + f[0]);
+                IngestionException.ERR_INVALID_FORMAT,
+                SourceType.CBS,
+                rawPayload,
+                "Invalid timestamp: " + f[7]
+            );
         }
 
-        txn.setSenderIfsc(trim(f[1]).toUpperCase());
-        txn.setReceiverIfsc(trim(f[2]).toUpperCase());
+        txn.setValueDate(ts);
+        txn.setSourceRef(trim(f[8]));
+        txn.setTxnStatus(TransactionStatus.valueOf(trim(f[9]).toUpperCase()));
 
-        try {
-            txn.setAmount(new BigDecimal(trim(f[3])));
-            txn.setGrossAmount(txn.getAmount());
-            txn.setFeeAmount(BigDecimal.ZERO);
-        } catch (Exception e) {
-            throw new IngestionException(
-                    IngestionException.ERR_INVALID_FORMAT,
-                    SourceType.CBS,
-                    rawPayload,
-                    "Invalid amount: " + f[3]);
-        }
-
-        txn.setCurrency(trim(f[4]).toUpperCase());
-
-        try {
-            txn.setValueDate(LocalDate.parse(trim(f[5])));
-        } catch (Exception e) {
-            throw new IngestionException(
-                    IngestionException.ERR_INVALID_FORMAT,
-                    SourceType.CBS,
-                    rawPayload,
-                    "Invalid date: " + f[5]);
-        }
-
-        txn.setSourceRef(trim(f[6]));
-
-        // 🔥 NEW: Transaction Status
-        try {
-            txn.setTxnStatus(TransactionStatus.valueOf(trim(f[7]).toUpperCase()));
-        } catch (Exception e) {
-            throw new IngestionException(
-                    IngestionException.ERR_INVALID_FORMAT,
-                    SourceType.CBS,
-                    rawPayload,
-                    "Invalid txn status: " + f[7]);
-        }
-
-        // ── Bank Names ────────────────────────────────────
         txn.setSenderBankName(BankNameResolver.fromIfsc(txn.getSenderIfsc()));
         txn.setReceiverBankName(BankNameResolver.fromIfsc(txn.getReceiverIfsc()));
 
-        // ── Priority ──────────────────────────────────────
         txn.setPriority(5);
-
-        // ── Normalized Payload ────────────────────────────
         txn.setNormalizedPayload(buildNormalized(txn));
 
-        // ── Validation ────────────────────────────────────
+        // VALIDATION
         PayloadValidator.ValidationResult vr =
                 PayloadValidator.validate(txn, SourceType.CBS);
 
         if (!vr.isPassed()) {
             txn.setProcessingStatus(ProcessingStatus.FAILED);
             txn.setErrorMessage(vr.getErrorSummary());
-            System.err.println("  [CBS-ADAPTER][FAIL] " + vr);
+
+            System.out.printf(
+            	    "[ADAPTER ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | STATUS=%-8s/%-10s%n",
+            	    Thread.currentThread().getName(),
+            	    safe(txn.getChannelCode()),
+            	    safe(txn.getSourceRef()),
+            	    formatAmount(txn.getAmount()),
+            	    safe(txn.getCurrency()),
+            	    safe(txn.getTxnStatus()),
+            	    safe(txn.getProcessingStatus())
+            	);
+
         } else {
             txn.setProcessingStatus(ProcessingStatus.VALIDATED);
 
-            // 🔥 IMPORTANT: Only SUCCESS goes forward
             if (txn.getTxnStatus() == TransactionStatus.SUCCESS) {
                 txn.setProcessingStatus(ProcessingStatus.QUEUED);
                 CBS_SOURCE.recordSuccess();
             }
         }
 
-        System.out.println("  [CBS-ADAPTER] " + txn.toAuditString());
+        System.out.printf(
+        	    "[ADAPTER ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | STATUS=%-8s/%-10s%n",
+        	    Thread.currentThread().getName(),
+        	    safe(txn.getChannelCode()),
+        	    safe(txn.getSourceRef()),
+        	    formatAmount(txn.getAmount()),
+        	    safe(txn.getCurrency()),
+        	    safe(txn.getTxnStatus()),
+        	    safe(txn.getProcessingStatus())
+        	);
+
         return txn;
     }
+
+
+	private String safe(Object val) {
+		return val == null ? "N/A" : val.toString();
+	}
 
     @Override
     public SourceType getSourceType() {
         return SourceType.CBS;
     }
 
-    // ─────────────────────────────────────────
+    // ─────────────────────────────
     // HELPERS
-    // ─────────────────────────────────────────
+    // ─────────────────────────────
 
     private String buildNormalized(IncomingTransaction txn) {
         return "{"
-                + "\"source\":\"CBS\","
-                + "\"ref\":\"" + txn.getSourceRef() + "\","
-                + "\"type\":\"" + txn.getTxnType() + "\","
-                + "\"senderIfsc\":\"" + txn.getSenderIfsc() + "\","
-                + "\"receiverIfsc\":\"" + txn.getReceiverIfsc() + "\","
+                + "\"txn_id\":\"" + txn.getSourceRef() + "\","
+                + "\"channel\":\"CBS\","
+                + "\"txn_type\":\"" + txn.getTxnType() + "\","
                 + "\"amount\":" + txn.getAmount() + ","
-                + "\"currency\":\"" + txn.getCurrency() + "\","
-                + "\"valueDate\":\"" + txn.getValueDate() + "\","
-                + "\"status\":\"" + txn.getTxnStatus() + "\""
+                + "\"currency\":\"" + txn.getCurrency() + "\""
                 + "}";
     }
 
@@ -165,12 +162,20 @@ public class CbsAdapter implements TransactionAdapter {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(input.getBytes("UTF-8"));
+
             StringBuilder sb = new StringBuilder();
             for (byte b : hash)
                 sb.append(String.format("%02x", b));
+
             return sb.toString();
+
         } catch (Exception e) {
             return "CHECKSUM-ERROR";
         }
+    }
+
+    private String formatAmount(BigDecimal amt) {
+        if (amt == null) return "0.00";
+        return String.format("%,.2f", amt);
     }
 }

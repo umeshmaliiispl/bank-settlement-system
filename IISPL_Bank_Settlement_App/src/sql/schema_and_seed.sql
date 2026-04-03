@@ -37,38 +37,46 @@ CREATE TABLE source_system (
 
 -- =============================================================================
 -- 2. CUSTOMER
--- =============================================================================
 CREATE TABLE customer (
-    id               BIGSERIAL       PRIMARY KEY,
-    first_name       VARCHAR(100)    NOT NULL,
-    last_name        VARCHAR(100)    NOT NULL,
-    email            VARCHAR(150)    UNIQUE,
-    kyc_status       VARCHAR(20)     NOT NULL DEFAULT 'PENDING',  -- PENDING, VERIFIED, REJECTED, EXPIRED, BLOCKED
-    customer_tier    VARCHAR(30),
-    onboarding_date  DATE            NOT NULL DEFAULT CURRENT_DATE,
-    created_at       TIMESTAMP       NOT NULL DEFAULT NOW(),
-    updated_at       TIMESTAMP       NOT NULL DEFAULT NOW(),
-    created_by       VARCHAR(50),
-    version          INT             NOT NULL DEFAULT 0
+    id BIGSERIAL PRIMARY KEY,
+
+    customer_id VARCHAR(20) UNIQUE NOT NULL,  -- CID1001
+    full_name VARCHAR(100),
+
+    kyc_status VARCHAR(20),       -- VERIFIED / PENDING
+    customer_status VARCHAR(20),  -- ACTIVE / INACTIVE
+
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    created_by VARCHAR(50),
+    version INT
 );
 
 -- =============================================================================
 -- 3. ACCOUNT
 -- =============================================================================
 CREATE TABLE account (
-    id               BIGSERIAL       PRIMARY KEY,
-    account_number   VARCHAR(30)     NOT NULL UNIQUE,
-    account_type     VARCHAR(20)     NOT NULL,           -- NOSTRO, VOSTRO, CURRENT, SAVINGS, SUSPENSE, CORRESPONDENT
-    balance          NUMERIC(20, 4)  NOT NULL DEFAULT 0,
-    currency         CHAR(3)         NOT NULL DEFAULT 'INR',
-    customer_id      BIGINT          REFERENCES customer(id),
-    bank_id          BIGINT,
-    status           VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE',  -- ACTIVE, INACTIVE, FROZEN, CLOSED
-    created_at       TIMESTAMP       NOT NULL DEFAULT NOW(),
-    updated_at       TIMESTAMP       NOT NULL DEFAULT NOW(),
-    created_by       VARCHAR(50),
-    version          INT             NOT NULL DEFAULT 0
+    id BIGSERIAL PRIMARY KEY,
+
+    account_number VARCHAR(30) UNIQUE NOT NULL,
+    ifsc_code VARCHAR(20),
+    bank_name VARCHAR(50),
+
+    customer_id VARCHAR(20) NOT NULL,  -- FK
+
+    account_type VARCHAR(20),
+    balance NUMERIC(15,2) DEFAULT 0,
+    currency VARCHAR(10),
+
+    account_status VARCHAR(20),  -- ACTIVE / BLOCKED
+
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    created_by VARCHAR(50),
+    version INT
 );
+
+
 
 -- =============================================================================
 -- 4. INCOMING_TRANSACTION
@@ -180,9 +188,48 @@ CREATE TABLE exchange_rate (
 
 
 
+  SELECT * FROM source_system;
+SELECT * FROM customer;
+SELECT * FROM account;
+SELECT * FROM exchange_rate;
 
-  
--- 🔥 ADD NEW COLUMNS TO existing incoming_transaction
+
+
+
+ALTER TABLE incoming_transaction
+ADD COLUMN channel_code VARCHAR(20),
+
+ADD COLUMN checksum VARCHAR(100),
+
+ADD COLUMN gross_amount NUMERIC(20,4),
+ADD COLUMN fee_amount NUMERIC(20,4),
+
+-- 🔥 MOST IMPORTANT (Transaction Status)
+ADD COLUMN txn_status VARCHAR(20) DEFAULT 'SUCCESS',
+
+-- BANK DETAILS
+ADD COLUMN sender_ifsc VARCHAR(20),
+ADD COLUMN receiver_ifsc VARCHAR(20),
+ADD COLUMN sender_bank_name VARCHAR(100),
+ADD COLUMN receiver_bank_name VARCHAR(100),
+
+-- SWIFT SUPPORT
+ADD COLUMN sender_bic VARCHAR(20),
+ADD COLUMN receiver_bic VARCHAR(20),
+
+-- FINTECH SUPPORT
+ADD COLUM
+
+
+
+
+SELECT * FROM source_system;
+SELECT * FROM customer;
+SELECT * FROM account;
+SELECT * FROM exchange_rate;
+
+
+
 
 ALTER TABLE incoming_transaction
 ADD COLUMN channel_code VARCHAR(20),
@@ -214,9 +261,6 @@ ADD COLUMN priority INT DEFAULT 5,
 ADD COLUMN error_message TEXT;
 
 
-
-
-
 -- First update existing rows (important)
 UPDATE incoming_transaction
 SET txn_status = 'SUCCESS'
@@ -232,6 +276,70 @@ CREATE INDEX idx_txn_status ON incoming_transaction(txn_status);
 CREATE INDEX idx_channel_code ON incoming_transaction(channel_code);
 CREATE INDEX idx_value_date ON incoming_transaction(value_date);
 
+SELECT * FROM incoming_transaction;
+
+
+-- TRUNCATE TABLE incoming_transaction RESTART IDENTITY CASCADE;
+
+
+
+
+-- SELECT
+--     column_name,
+--     data_type,
+--     is_nullable,
+--     column_default
+-- FROM
+--     information_schema.columns
+-- WHERE
+--     table_name = 'incoming_transaction';
+
+
+
+
+
+-- ALTER TABLE netting_position
+-- DROP CONSTRAINT netting_position_counterparty_bank_id_currency_position_date_key;
+
+
+
+ALTER TABLE netting_position
+DROP COLUMN counterparty_bank_id;
+
+
+
+-- -- -- ALTER TABLE netting_position
+-- -- -- DROP CONSTRAINT netting_position_counterparty_bank_id_currency_position_date_key;
+
+
+
+-- -- -- ALTER TABLE netting_position
+-- -- -- DROP COLUMN counterparty_bank_id;
+
+
+
+
+-- -- -- ALTER TABLE netting_position
+-- -- -- ADD CONSTRAINT uk_netting_bank_currency_date
+-- -- -- UNIQUE (bank_name, currency, position_date);
+
+
+-- -- ALTER TABLE netting_position
+-- -- ALTER COLUMN bank_name SET NOT NULL;
+
+
+
+-- ALTER TABLE settlement_instruction
+-- DROP CONSTRAINT settlement_instruction_transaction_id_fkey;
+
+-- ALTER TABLE settlement_instruction
+-- DROP COLUMN transaction_id;
+
+ALTER TABLE settlement_instruction
+DROP COLUMN sender_bank_id;
+
+ALTER TABLE settlement_instruction
+DROP COLUMN receiver_bank_id;
 
 
 
@@ -246,5 +354,61 @@ CREATE INDEX idx_value_date ON incoming_transaction(value_date);
 
 
 
+
+-- -- -- ALTER TABLE netting_position
+-- -- -- DROP CONSTRAINT netting_position_counterparty_bank_id_currency_position_date_key;
+
+
+
+-- -- -- ALTER TABLE netting_position
+-- -- -- DROP COLUMN counterparty_bank_id;
+
+
+
+
+-- -- -- ALTER TABLE netting_position
+-- -- -- ADD CONSTRAINT uk_netting_bank_currency_date
+-- -- -- UNIQUE (bank_name, currency, position_date);
+
+
+-- -- ALTER TABLE netting_position
+-- -- ALTER COLUMN bank_name SET NOT NULL;
+
+
+
+-- ALTER TABLE settlement_instruction
+-- DROP CONSTRAINT settlement_instruction_transaction_id_fkey;
+
+ALTER TABLE settlement_instruction
+DROP COLUMN transaction_id;
+
+
+
+
+
+
+-- -- ALTER TABLE netting_position
+-- -- DROP CONSTRAINT netting_position_counterparty_bank_id_currency_position_date_key;
+
+
+
+-- -- ALTER TABLE netting_position
+-- -- DROP COLUMN counterparty_bank_id;
+
+
+
+
+-- -- ALTER TABLE netting_position
+-- -- ADD CONSTRAINT uk_netting_bank_currency_date
+-- -- UNIQUE (bank_name, currency, position_date);
+
+
+-- ALTER TABLE netting_position
+-- ALTER COLUMN bank_name SET NOT NULL;
+
+
+
+ALTER TABLE settlement_instruction
+DROP CONSTRAINT settlement_instruction_transaction_id_fkey;
 
 

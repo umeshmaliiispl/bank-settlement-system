@@ -10,12 +10,6 @@ public class DebitTransaction extends Transaction {
 
 	@Override
 	public void execute(Account account) {
-
-		if (account.getBalance().compareTo(getAmount()) < 0) {
-			throw new RuntimeException("Insufficient Balance");
-		}
-
-		BigDecimal newBal = account.getBalance().subtract(getAmount());
-		account.setBalance(newBal);
+	    account.debit(getAmount());   
 	}
 }

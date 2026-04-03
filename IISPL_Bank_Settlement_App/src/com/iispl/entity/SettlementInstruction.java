@@ -1,10 +1,25 @@
 package com.iispl.entity;
 
 import java.time.LocalDate;
+
 import com.iispl.enums.ChannelType;
 import com.iispl.enums.InstructionStatus;
 
-public class SettlementInstruction extends BaseEntity {
+public class SettlementInstruction {
+
+	private String instructionId;
+	private String fromBank;
+	private String toBank;
+	private double amount;
+
+	private ChannelType channel;
+	private InstructionStatus instructionStatus;
+
+	private LocalDate valueDate;
+
+	// ─────────────────────────────────────────────
+	// GETTERS & SETTERS
+	// ─────────────────────────────────────────────
 
 	public String getInstructionId() {
 		return instructionId;
@@ -14,36 +29,20 @@ public class SettlementInstruction extends BaseEntity {
 		this.instructionId = instructionId;
 	}
 
-	public long getTransactionId() {
-		return transactionId;
+	public String getFromBank() {
+		return fromBank;
 	}
 
-	public void setTransactionId(long transactionId) {
-		this.transactionId = transactionId;
+	public void setFromBank(String fromBank) {
+		this.fromBank = fromBank;
 	}
 
-	public ChannelType getChannel() {
-		return channel;
+	public String getToBank() {
+		return toBank;
 	}
 
-	public void setChannel(ChannelType channel) {
-		this.channel = channel;
-	}
-
-	public int getPriority() {
-		return priority;
-	}
-
-	public void setPriority(int priority) {
-		this.priority = priority;
-	}
-
-	public LocalDate getValueDate() {
-		return valueDate;
-	}
-
-	public void setValueDate(LocalDate valueDate) {
-		this.valueDate = valueDate;
+	public void setToBank(String toBank) {
+		this.toBank = toBank;
 	}
 
 	public String getSenderBankId() {

@@ -1,67 +1,93 @@
 package com.iispl.config;
 
-
 import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.Properties;
 
-public class DatabaseConfig {
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
-    private static String DRIVER;
-    private static String URL;
-    private static String USER;
-    private static String PASSWORD;
+/**
+ * Database Configuration using HikariCP (Optimized for Neon PostgreSQL)
+ */
+public final class DatabaseConfig {
 
-    // Static block to load properties once
-    static {
-        try {
-            Properties props = new Properties();
+	private static final HikariDataSource DATA_SOURCE;
 
-            InputStream input = DatabaseConfig.class
-                    .getClassLoader()
-                    .getResourceAsStream("db.properties");
+	static {
+		try {
+			Properties properties = new Properties();
 
-            if (input == null) {
-                throw new RuntimeException("❌ db.properties file not found in resources folder!");
-            }
+			try (InputStream inputStream = DatabaseConfig.class.getClassLoader().getResourceAsStream("db.properties")) {
 
-            props.load(input);
+				if (inputStream == null) {
+					throw new RuntimeException("db.properties not found in resources folder ");
+				}
 
-            DRIVER = props.getProperty("DRIVER_CLASS");
-            URL = props.getProperty("CONNECTION_STRING");
-            USER = props.getProperty("USERNAME");
-            PASSWORD = props.getProperty("PASSWORD");
+				properties.load(inputStream);
+			}
 
-            if (URL == null || USER == null || PASSWORD == null) {
-                throw new RuntimeException("❌ Missing DB configuration values!");
-            }
+			String jdbcUrl = require(properties, "CONNECTION_STRING");
+			String username = require(properties, "USERNAME");
+			String password = require(properties, "PASSWORD");
+			String driverClass = require(properties, "DRIVER_CLASS");
 
-            Class.forName(DRIVER);
+			HikariConfig hikariConfig = new HikariConfig();
 
-            System.out.println("✅ [DB] Config loaded successfully.");
+			hikariConfig.setJdbcUrl(jdbcUrl);
+			hikariConfig.setUsername(username);
+			hikariConfig.setPassword(password);
+			hikariConfig.setDriverClassName(driverClass);
 
-        } catch (Exception e) {
-            throw new RuntimeException("❌ Failed to load DB config", e);
-        }
-    }
+			// NEON OPTIMIZED SETTINGS
+			hikariConfig.setMaximumPoolSize(5); // keeping small for Neon
+			hikariConfig.setMinimumIdle(1);
+			hikariConfig.setConnectionTimeout(30000);
+			hikariConfig.setIdleTimeout(300000);
+			hikariConfig.setMaxLifetime(1200000);
 
-    // Create new connection (thread-safe)
-    public static Connection getConnection() throws SQLException {
-        Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
+			// RELIABILITY SETTINGS
+			hikariConfig.setKeepaliveTime(30000); // prevents connection reset
+			hikariConfig.setValidationTimeout(5000);
 
-        System.out.println("🔗 [DB] Connected by " + Thread.currentThread().getName());
+			hikariConfig.addDataSourceProperty("sslmode", "require");
+			hikariConfig.addDataSourceProperty("tcpKeepAlive", "true");
+			hikariConfig.addDataSourceProperty("reWriteBatchedInserts", "true");
 
-        return conn;
-    }
+			// opptional -- Faster startup
+			hikariConfig.setInitializationFailTimeout(0);
 
-    // Test method
-    public static void main(String[] args) {
-        try (Connection conn = getConnection()) {
-            System.out.println("🎉 SUCCESS: Connected to -> " + conn.getMetaData().getURL());
-        } catch (Exception e) {
-            System.err.println("❌ FAILED: " + e.getMessage());
-        }
-    }
+			DATA_SOURCE = new HikariDataSource(hikariConfig);
+
+			System.out.println(" Database HikariCP Pool initialized (Neon)");
+
+		} catch (Exception exception) {
+			throw new RuntimeException("Failed to initialize DB pool", exception);
+		}
+	}
+
+//	Get connection from pool
+	 
+	public static Connection getConnection() throws Exception {
+		return DATA_SOURCE.getConnection();
+	}
+
+
+	public static void shutdown() {
+		if (DATA_SOURCE != null && !DATA_SOURCE.isClosed()) {
+			DATA_SOURCE.close();
+			System.out.println("Database Connection pool closed");
+		}
+	}
+
+
+	private static String require(Properties properties, String key) {
+		String value = properties.getProperty(key);
+
+		if (value == null || value.trim().isEmpty()) {
+			throw new RuntimeException("Missing required DB property: " + key);
+		}
+
+		return value.trim();
+	}
 }

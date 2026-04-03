@@ -1,7 +1,6 @@
 package com.iispl.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import com.iispl.enums.ProcessingStatus;
@@ -19,13 +18,18 @@ public class IncomingTransaction extends BaseEntity {
 	private String normalizedPayload;
 	private String checksum;
 
+	private String senderAccount;
+	private String receiverAccount;
+	private String senderCustomerId;
+	private String receiverCustomerId;
+
 	// CORE
 	private TransactionType txnType;
 	private BigDecimal amount;
 	private BigDecimal grossAmount;
 	private BigDecimal feeAmount;
 	private String currency;
-	private LocalDate valueDate;
+	private LocalDateTime valueDate;
 
 	// 🔥 NEW (SOURCE STATUS)
 	private TransactionStatus txnStatus;
@@ -47,7 +51,7 @@ public class IncomingTransaction extends BaseEntity {
 	private int priority;
 	private int retryCount;
 	private String errorMessage;
-	
+
 	// FINTECH SPECIFIC
 	private String partnerName;
 	private String merchantId;
@@ -61,18 +65,31 @@ public class IncomingTransaction extends BaseEntity {
 		this.feeAmount = BigDecimal.ZERO;
 	}
 
-	// 🔥 ONLY SUCCESS GOES TO SETTLEMENT
+	// ONLY SUCCESS GOES TO SETTLEMENT
 	public boolean isQueueable() {
 		return TransactionStatus.SUCCESS.equals(txnStatus) && (ProcessingStatus.VALIDATED.equals(processingStatus)
 				|| ProcessingStatus.QUEUED.equals(processingStatus));
 	}
 
+//	public String toAuditString() {
+//		return String.format("[%s] %s | %s %s %s | %s → %s | SRC=%s | PROC=%s", channelCode, sourceRef, txnType,
+//				currency, amount, senderIfsc, receiverIfsc, txnStatus, processingStatus);
+//	}
+
 	public String toAuditString() {
-		return String.format("[%s] %s | %s %s %s | %s → %s | SRC=%s | PROC=%s", channelCode, sourceRef, txnType,
-				currency, amount, senderIfsc, receiverIfsc, txnStatus, processingStatus);
+		return String.format("[%s] REF=%-18s | AMT=%10s %-3s | STATUS=%s/%s", safe(channelCode), safe(sourceRef),
+				formatAmount(amount), safe(currency), safe(txnStatus), safe(processingStatus));
 	}
 
-	// 🔥 GETTERS / SETTERS (IMPORTANT ONES)
+	private String formatAmount(java.math.BigDecimal amt) {
+		if (amt == null)
+			return "0.00";
+		return String.format("%,.2f", amt);
+	}
+
+	private String safe(Object val) {
+		return val == null ? "N/A" : val.toString();
+	}
 
 	public TransactionStatus getTxnStatus() {
 		return txnStatus;
@@ -194,27 +211,27 @@ public class IncomingTransaction extends BaseEntity {
 		this.currency = currency;
 	}
 
-	public LocalDate getValueDate() {
+	public LocalDateTime getValueDate() {
 		return valueDate;
 	}
-	
+
 	public String getSenderBic() {
-	    return senderBic;
+		return senderBic;
 	}
 
 	public void setSenderBic(String senderBic) {
-	    this.senderBic = senderBic;
+		this.senderBic = senderBic;
 	}
 
 	public String getReceiverBic() {
-	    return receiverBic;
+		return receiverBic;
 	}
 
 	public void setReceiverBic(String receiverBic) {
-	    this.receiverBic = receiverBic;
+		this.receiverBic = receiverBic;
 	}
 
-	public void setValueDate(LocalDate valueDate) {
+	public void setValueDate(LocalDateTime valueDate) {
 		this.valueDate = valueDate;
 	}
 
@@ -261,21 +278,21 @@ public class IncomingTransaction extends BaseEntity {
 	public int getRetryCount() {
 		return retryCount;
 	}
-	
+
 	public String getPartnerName() {
-	    return partnerName;
+		return partnerName;
 	}
 
 	public void setPartnerName(String partnerName) {
-	    this.partnerName = partnerName;
+		this.partnerName = partnerName;
 	}
 
 	public String getMerchantId() {
-	    return merchantId;
+		return merchantId;
 	}
 
 	public void setMerchantId(String merchantId) {
-	    this.merchantId = merchantId;
+		this.merchantId = merchantId;
 	}
 
 	public void setRetryCount(int retryCount) {
@@ -288,6 +305,38 @@ public class IncomingTransaction extends BaseEntity {
 
 	public String getErrorMessage() {
 		return errorMessage;
+	}
+
+	public String getSenderAccount() {
+		return senderAccount;
+	}
+
+	public void setSenderAccount(String senderAccount) {
+		this.senderAccount = senderAccount;
+	}
+
+	public String getReceiverAccount() {
+		return receiverAccount;
+	}
+
+	public void setReceiverAccount(String receiverAccount) {
+		this.receiverAccount = receiverAccount;
+	}
+
+	public String getSenderCustomerId() {
+		return senderCustomerId;
+	}
+
+	public void setSenderCustomerId(String senderCustomerId) {
+		this.senderCustomerId = senderCustomerId;
+	}
+
+	public String getReceiverCustomerId() {
+		return receiverCustomerId;
+	}
+
+	public void setReceiverCustomerId(String receiverCustomerId) {
+		this.receiverCustomerId = receiverCustomerId;
 	}
 
 }

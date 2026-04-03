@@ -10,8 +10,6 @@ public class CreditTransaction extends Transaction {
 
     @Override
     public void execute(Account account) {
-        BigDecimal newBal = account.getBalance().add(getAmount());
-        account.setBalance(newBal);
+        account.credit(getAmount());  // ✅ correct way
     }
-
 }

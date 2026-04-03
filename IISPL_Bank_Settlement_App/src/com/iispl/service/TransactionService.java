@@ -9,5 +9,6 @@ import java.util.List;
 public interface TransactionService 
 {
     public void save(IncomingTransaction txn);
-
+    public void printAllTransactions();
+    
 }

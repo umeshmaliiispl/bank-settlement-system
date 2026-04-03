@@ -5,7 +5,7 @@ import com.iispl.enums.SourceType;
 import com.iispl.enums.TransactionStatus;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -69,8 +69,9 @@ public final class PayloadValidator {
         else if (!VALID_CURRENCIES.contains(txn.getCurrency().toUpperCase()))
             errors.add("[ING-004] invalid currency: " + txn.getCurrency());
 
+        // 🔥 NOW TIMESTAMP (NOT DATE)
         if (txn.getValueDate() == null)
-            errors.add("[ING-002] valueDate is mandatory");
+            errors.add("[ING-002] txnTimestamp is mandatory");
 
         if (txn.getSourceSystem() == null)
             errors.add("[ING-002] sourceSystem required");
@@ -78,14 +79,11 @@ public final class PayloadValidator {
         if (isBlank(txn.getChannelCode()))
             errors.add("[ING-002] channelCode required");
 
-        // 🔥 NEW (IMPORTANT)
         if (txn.getTxnStatus() == null)
-            errors.add("[ING-002] txnStatus is mandatory (SUCCESS / FAILED / PENDING)");
+            errors.add("[ING-002] txnStatus is mandatory");
     }
 
-    // ─────────────────────────────────────────
-    // LEVEL 2 — BUSINESS RULES
-    // ─────────────────────────────────────────
+     
     private static void validateBusinessRules(IncomingTransaction txn,
                                               SourceType sourceType,
                                               List<String> errors) {
@@ -158,10 +156,12 @@ public final class PayloadValidator {
                 && txn.getSenderIfsc().equalsIgnoreCase(txn.getReceiverIfsc()))
             errors.add("[ING-004] sender & receiver cannot be same");
 
+        // FIXED FOR TIMESTAMP
         if (txn.getValueDate() != null) {
-            LocalDate cutoff = LocalDate.now().minusDays(30);
+            LocalDateTime cutoff = LocalDateTime.now().minusDays(30);
+
             if (txn.getValueDate().isBefore(cutoff))
-                errors.add("[ING-004] valueDate too old");
+                errors.add("[ING-004] txnTimestamp too old");
         }
     }
 
@@ -207,8 +207,8 @@ public final class PayloadValidator {
         @Override
         public String toString() {
             return passed
-                    ? "[" + sourceType + "] VALID"
-                    : "[" + sourceType + "] INVALID → " + getErrorSummary();
+                    ? "" + sourceType + " - VALID"
+                    : "" + sourceType + " - INVALID → " + getErrorSummary();
         }
     }
 }
