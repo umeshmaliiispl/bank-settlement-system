@@ -45,20 +45,20 @@ public class SettlementInstruction {
 		this.toBank = toBank;
 	}
 
-	public double getAmount() {
-		return amount;
+	public String getSenderBankId() {
+		return senderBankId;
 	}
 
-	public void setAmount(double amount) {
-		this.amount = amount;
+	public void setSenderBankId(String senderBankId) {
+		this.senderBankId = senderBankId;
 	}
 
-	public ChannelType getChannel() {
-		return channel;
+	public String getReceiverBankId() {
+		return receiverBankId;
 	}
 
-	public void setChannel(ChannelType channel) {
-		this.channel = channel;
+	public void setReceiverBankId(String receiverBankId) {
+		this.receiverBankId = receiverBankId;
 	}
 
 	public InstructionStatus getInstructionStatus() {
@@ -69,11 +69,29 @@ public class SettlementInstruction {
 		this.instructionStatus = instructionStatus;
 	}
 
-	public LocalDate getValueDate() {
-		return valueDate;
+	public SettlementInstruction(String instructionId, long transactionId, ChannelType channel, int priority,
+			LocalDate valueDate, String senderBankId, String receiverBankId, InstructionStatus instructionStatus) {
+		super();
+		this.instructionId = instructionId;
+		this.transactionId = transactionId;
+		this.channel = channel;
+		this.priority = priority;
+		this.valueDate = valueDate;
+		this.senderBankId = senderBankId;
+		this.receiverBankId = receiverBankId;
+		this.instructionStatus = instructionStatus;
 	}
 
-	public void setValueDate(LocalDate valueDate) {
-		this.valueDate = valueDate;
-	}
+	private String instructionId;
+	private long transactionId;
+
+	private ChannelType channel;
+	private int priority;
+	private LocalDate valueDate;
+
+	private String senderBankId;
+	private String receiverBankId;
+
+	private InstructionStatus instructionStatus;
+
 }

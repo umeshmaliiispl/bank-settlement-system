@@ -153,11 +153,8 @@ public class MainApp {
 
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
 
-		System.out.println(
-				"\n==============================================================================================");
-		System.out.println("                           SETTLEMENT INSTRUCTIONS REPORT");
-		System.out.println(
-				"==============================================================================================");
+                    // ✅ STORE IN MEMORY (for report)
+                    //allTxns.add(txn);
 
 		System.out.printf("%-18s %-8s %-8s %-18s %-18s %12s %-6s %-10s %-14s %-20s\n", "Ref ID", "Channel", "Type",
 				"Sender Bank", "Receiver Bank", "Amount", "Currency", "TxnStatus", "Processing Status", "Txn Time");
@@ -167,16 +164,20 @@ public class MainApp {
 
 		int queued = 0, failed = 0, flagged = 0;
 
-		for (IncomingTransaction txn : list) {
+    // ─────────────────────────────────────────────
+    // FINAL REPORT
+    // ─────────────────────────────────────────────
+    private static void listAllIncomingTransactions() {
+    	
+    	List<IncomingTransaction> transactions=TransactionDaoImpl.getAllTransactions();
 
-			String processingStatus = safe(txn.getProcessingStatus());
+        if (transactions.isEmpty()) {
+            System.out.println("\n⚠ No transactions available.");
+            return;
+        }
 
-			if ("QUEUED".equals(processingStatus))
-				queued++;
-			else if ("FAILED".equals(processingStatus))
-				failed++;
-			else if ("FLAGGED".equals(processingStatus))
-				flagged++;
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss a");
 
 			System.out.printf("%-18s %-8s %-8s %-18s %-18s %12.2f %-6s %-10s %-14s %-20s\n", safe(txn.getSourceRef()),
 					safe(txn.getChannelCode()), safe(txn.getTxnType()), safe(txn.getSenderBankName()),
@@ -185,19 +186,33 @@ public class MainApp {
 					txn.getValueDate() != null ? txn.getValueDate().format(formatter) : "N/A");
 		}
 
-		System.out.println(
-				"----------------------------------------------------------------------------------------------");
+        System.out.printf(
+            "%-20s %-28s %-28s %-12s %14s %-14s %-20s\n",
+            "Ref No",
+            "Sender Bank",
+            "Receiver Bank",
+            "Channel",
+            "Amount",
+            "Txn Status",
+            "Txn Time"
+        );
 
 		System.out.println("TOTAL READY (QUEUED): " + queued);
 		System.out.println("TOTAL FAILED: " + failed);
 		System.out.println("TOTAL FLAGGED: " + flagged);
 
-		System.out.println(
-				"==============================================================================================");
-	}
+        for (IncomingTransaction txn : transactions) {
 
-	private static String safe(Object val) {
-		return val == null ? "N/A" : val.toString();
-	}
+            System.out.printf(
+                "%-20s %-28s %-28s %-12s %14s %-14s %-20s\n",
+                txn.getSourceRef(),
+                txn.getSenderBankName(),
+                txn.getReceiverBankName(),
+                txn.getChannelCode(),
+                txn.getAmount().toPlainString(),
+                txn.getTxnStatus(),
+                txn.getIngestTimestamp().format(formatter)
+            );
+        }
 
 }

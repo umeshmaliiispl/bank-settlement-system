@@ -11,7 +11,7 @@ public class IncomingTransaction extends BaseEntity {
 
 	private Long incomingTxnId;
 
-	// SOURCE
+	// SOURCESYstem
 	private SourceSystem sourceSystem;
 	private String sourceRef;
 	private String rawPayload;
@@ -99,48 +99,48 @@ public class IncomingTransaction extends BaseEntity {
 		this.txnStatus = txnStatus;
 	}
 
-	public void setChecksum(String v) {
-		this.checksum = v;
+	public void setChecksum(String checksum) {
+		this.checksum = checksum;
 	}
 
 	public String getChecksum() {
 		return checksum;
 	}
 
-	public void setGrossAmount(BigDecimal v) {
-		this.grossAmount = v;
+	public void setGrossAmount(BigDecimal grossAmount) {
+		this.grossAmount = grossAmount;
 	}
 
 	public BigDecimal getGrossAmount() {
 		return grossAmount;
 	}
 
-	public void setFeeAmount(BigDecimal v) {
-		this.feeAmount = v;
+	public void setFeeAmount(BigDecimal feeAmount) {
+		this.feeAmount = feeAmount;
 	}
 
 	public BigDecimal getFeeAmount() {
 		return feeAmount;
 	}
 
-	public void setSenderIfsc(String v) {
-		this.senderIfsc = v;
+	public void setSenderIfsc(String sendreIfsc) {
+		this.senderIfsc = senderIfsc;
 	}
 
 	public String getSenderIfsc() {
 		return senderIfsc;
 	}
 
-	public void setReceiverIfsc(String v) {
-		this.receiverIfsc = v;
+	public void setReceiverIfsc(String receiverIfsc) {
+		this.receiverIfsc = receiverIfsc;
 	}
 
 	public String getReceiverIfsc() {
 		return receiverIfsc;
 	}
 
-	public void setPriority(int v) {
-		this.priority = v;
+	public void setPriority(int priority) {
+		this.priority = priority;
 	}
 
 	public int getPriority() {
@@ -299,8 +299,8 @@ public class IncomingTransaction extends BaseEntity {
 		this.retryCount = retryCount;
 	}
 
-	public void setErrorMessage(String v) {
-		this.errorMessage = v;
+	public void setErrorMessage(String errorMessage) {
+		this.errorMessage = errorMessage;
 	}
 
 	public String getErrorMessage() {
