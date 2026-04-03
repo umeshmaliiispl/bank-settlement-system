@@ -1,6 +1,7 @@
 package com.iispl.entity;
 
 import com.iispl.enums.ProcessingStatus;
+import com.iispl.enums.TransactionStatus;
 import com.iispl.enums.TransactionType;
 
 import java.math.BigDecimal;
@@ -85,6 +86,16 @@ public class IncomingTransaction extends BaseEntity {
 	private String currency; // ISO 4217 — INR / USD / GBP / EUR / AED / …
 	private LocalDate valueDate; // settlement / value date
 	private LocalDateTime ingestTimestamp;// timestamp of ingestion into this system
+	
+	private TransactionStatus txnStatus;
+
+	public TransactionStatus getTxnStatus() {
+		return txnStatus;
+	}
+
+	public void setTxnStatus(TransactionStatus txnStatus) {
+		this.txnStatus = txnStatus;
+	}
 
 	// ─────────────────────────────────────────────────────────────────────────
 	// [C] SENDER DETAILS

@@ -1,6 +1,7 @@
 package com.iispl.utility;
 
 import com.iispl.adaptor.AdapterRegistry;
+import com.iispl.dao.TransactionDaoImpl;   // ✅ YOUR DAO
 import com.iispl.entity.IncomingTransaction;
 import com.iispl.enums.SourceType;
 
@@ -9,18 +10,14 @@ import java.io.FileReader;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class MainApp {
 
     private static final AdapterRegistry registry = AdapterRegistry.getInstance();
 
-    // 🔥 QUEUE (Producer → Consumer)
-    private static final BlockingQueue<IncomingTransaction> queue =
-            new LinkedBlockingQueue<>();
+    // ✅ DB DAO
+    private static final TransactionDaoImpl dao = new TransactionDaoImpl();
 
-    // 🔥 STORE ALL TRANSACTIONS (for report)
     private static final List<IncomingTransaction> allTxns =
             new ArrayList<>();
 
@@ -28,22 +25,17 @@ public class MainApp {
 
         System.out.println("========== IISPL INGESTION PIPELINE ==========");
 
-        // STEP 1: PRODUCER
         processFile("cbs_transactions.txt", SourceType.CBS);
         processFile("neft_transactions.txt", SourceType.NEFT);
         processFile("upi_transactions.txt", SourceType.UPI);
 
-        // STEP 2: REPORT (🔥 YOUR REQUIREMENT)
         listAllIncomingTransactions();
 
-        // STEP 3: CONSUMER
-        startSettlementEngine();
-
-        System.out.println("\n========== PIPELINE COMPLETE ==========");
+        System.out.println("\n========== INGESTION COMPLETE ==========");
     }
 
     // ─────────────────────────────────────────────
-    // PRODUCER
+    // PRODUCER (PARSE + SAVE TO DB)
     // ─────────────────────────────────────────────
     private static void processFile(String fileName, SourceType type) {
 
@@ -63,13 +55,13 @@ public class MainApp {
                 try {
                     IncomingTransaction txn = registry.adapt(type, line);
 
-                    // ✅ store for report
+                    // ✅ SAVE TO DB
+                    dao.save(txn);
+
+                    // ✅ STORE IN MEMORY (for report)
                     allTxns.add(txn);
 
-                    // ✅ push to queue
-                    queue.put(txn);
-
-                    System.out.println("→ QUEUED: " + txn.toAuditString());
+                    System.out.println("✔ INGESTED + SAVED: " + txn.toAuditString());
 
                 } catch (Exception e) {
                     System.err.println("[ERROR][" + type + "] " + e.getMessage());
@@ -82,84 +74,61 @@ public class MainApp {
     }
 
     // ─────────────────────────────────────────────
-    // 🔥 REPORT (LIKE YOUR OLD TRANSACTION REPORT)
+    // FINAL REPORT
     // ─────────────────────────────────────────────
+    
     private static void listAllIncomingTransactions() {
 
-        if (allTxns.isEmpty()) {
+        List<IncomingTransaction> txns = dao.findAll();
+
+        if (txns.isEmpty()) {
             System.out.println("\n⚠ No transactions available.");
             return;
         }
 
-        DateTimeFormatter formatter =
-                DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-
-        System.out.println(
-            "\n======================================================================================================================================");
-        System.out.println(
-            "                                          ALL INCOMING TRANSACTIONS (MULTI-CHANNEL)");
-        System.out.println(
-            "======================================================================================================================================");
+        System.out.println("\n=============================================================================================================================================================================================");
+        System.out.println("                                      					ALL INCOMING TRANSACTIONS (COMPLETE DB VIEW)");
+        System.out.println("=============================================================================================================================================================================================");
 
         System.out.printf(
-            "%-20s %-28s %-28s %-12s %12s %-10s %-20s\n",
-            "Ref No",
-            "Sender Bank",
-            "Receiver Bank",
-            "Channel",
-            "Amount",
-            "Status",
-            "Txn Time"
+            "%-4s %-20s %-8s %-12s %-5s %-10s %-10s %-12s %-20s %-20s %-20s %-8s %-10s %-10s %-10s\n",
+            "ID", "REF", "TYPE", "AMOUNT", "CUR",
+            "TXN_STATUS", "PROC_ST", "VAL_DATE",
+            "INGEST_TIME", "CREATED_AT", "UPDATED_AT",
+            "VER", "CHANNEL", "PRIORITY", "ERROR"
         );
 
-        System.out.println(
-            "--------------------------------------------------------------------------------------------------------------------------------------");
+        System.out.println("-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
 
-        for (IncomingTransaction txn : allTxns) {
+        java.time.format.DateTimeFormatter fmt =
+                java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+
+        for (IncomingTransaction t : txns) {
+
+            String ingest = t.getIngestTimestamp() != null ? t.getIngestTimestamp().format(fmt) : "N/A";
+            String created = t.getCreatedAt() != null ? t.getCreatedAt().format(fmt) : "N/A";
+            String updated = t.getUpdatedAt() != null ? t.getUpdatedAt().format(fmt) : "N/A";
 
             System.out.printf(
-                "%-20s %-28s %-28s %-12s %12s %-10s %-20s\n",
-                txn.getSourceRef(),
-                txn.getSenderBankName(),
-                txn.getReceiverBankName(),
-                txn.getChannelCode(),
-                txn.getAmount().toPlainString(),
-                txn.getProcessingStatus(),
-                txn.getIngestTimestamp().format(formatter)
+                "%-4d %-20s %-8s %-12.2f %-5s %-10s %-10s %-12s %-20s %-20s %-20s %-8d %-10s %-10d %-10s\n",
+                t.getId(),
+                t.getSourceRef(),
+                t.getTxnType(),
+                t.getAmount().doubleValue(),
+                t.getCurrency(),
+                t.getTxnStatus(),
+                t.getProcessingStatus(),
+                t.getValueDate(),
+                ingest,
+                created,
+                updated,
+                t.getVersion(),
+                t.getChannelCode(),
+                t.getPriority(),
+                (t.getErrorMessage() != null ? "YES" : "NO")
             );
         }
 
-        System.out.println(
-            "======================================================================================================================================");
-    }
-
-    // ─────────────────────────────────────────────
-    // CONSUMER (SETTLEMENT)
-    // ─────────────────────────────────────────────
-    private static void startSettlementEngine() {
-
-        System.out.println("\n========== SETTLEMENT ENGINE START ==========");
-
-        while (!queue.isEmpty()) {
-
-            try {
-                IncomingTransaction txn = queue.take();
-
-                if (!txn.isQueueable()) {
-                    System.out.println("⚠ SKIPPED: " + txn.toAuditString());
-                    continue;
-                }
-
-                System.out.println("💰 SETTLING → " + txn.toAuditString());
-
-                // future:
-                // txn.setProcessingStatus(ProcessingStatus.PROCESSED);
-
-            } catch (Exception e) {
-                System.err.println("Settlement error → " + e.getMessage());
-            }
-        }
-
-        System.out.println("========== SETTLEMENT COMPLETE ==========");
+        System.out.println("=============================================================================================================================================================================================");
     }
 }

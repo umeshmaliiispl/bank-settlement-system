@@ -6,13 +6,12 @@ import java.util.*;
 
 import com.iispl.config.DatabaseConfig;
 import com.iispl.entity.IncomingTransaction;
-import com.iispl.entity.Transaction;
 import com.iispl.enums.*;
 
 public class TransactionDaoImpl implements TransactionDao {
 
     // =========================================================
-    // SAVE
+    // ✅ SAVE (ALREADY GOOD - SMALL SAFE FIX)
     // =========================================================
     @Override
     public void save(IncomingTransaction txn) {
@@ -23,8 +22,7 @@ public class TransactionDaoImpl implements TransactionDao {
                 "txn_status, processing_status, sender_ifsc, receiver_ifsc, " +
                 "sender_bank_name, receiver_bank_name, sender_bic, receiver_bic, " +
                 "partner_name, merchant_id, channel_code, checksum, error_message" +
-                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) " +
-                "ON CONFLICT (source_system_id, source_ref) DO NOTHING";
+                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
         try (Connection con = DatabaseConfig.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -40,6 +38,7 @@ public class TransactionDaoImpl implements TransactionDao {
             ps.setBigDecimal(8, txn.getFeeAmount());
             ps.setString(9, txn.getCurrency());
 
+            // ✅ FIX (IMPORTANT)
             ps.setDate(10, txn.getValueDate() != null ? Date.valueOf(txn.getValueDate()) : null);
 
             ps.setString(11, txn.getTxnStatus().name());
@@ -64,26 +63,28 @@ public class TransactionDaoImpl implements TransactionDao {
             ps.executeUpdate();
 
         } catch (Exception e) {
-            System.out.println("⚠ Skipped duplicate or error: " + txn.getSourceRef());
+            throw new RuntimeException("DB Insert Failed", e);
         }
     }
 
     // =========================================================
-    // FETCH ALL
+    // 🔥 REQUIRED FOR SETTLEMENT
     // =========================================================
     @Override
     public List<IncomingTransaction> findAll() {
 
         List<IncomingTransaction> list = new ArrayList<>();
 
-        String sql = "SELECT * FROM incoming_transaction ORDER BY id";
+        String sql = "SELECT * FROM incoming_transaction";
 
         try (Connection con = DatabaseConfig.getConnection();
              Statement st = con.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
 
             while (rs.next()) {
-                list.add(mapRow(rs));
+
+                IncomingTransaction txn = mapRow(rs);
+                list.add(txn);
             }
 
         } catch (Exception e) {
@@ -94,71 +95,71 @@ public class TransactionDaoImpl implements TransactionDao {
     }
 
     // =========================================================
-    // ROW MAPPER (FULL DB MAPPING)
+    // 🔥 FIND BY ID (MENU OPTION 5)
+    // =========================================================
+    @Override
+    public IncomingTransaction findById(long id) {
+
+        String sql = "SELECT * FROM incoming_transaction WHERE id=?";
+
+        try (Connection con = DatabaseConfig.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setLong(1, id);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return mapRow(rs);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    // =========================================================
+    // 🔥 COMMON MAPPER (VERY IMPORTANT CLEAN CODE)
     // =========================================================
     private IncomingTransaction mapRow(ResultSet rs) throws Exception {
 
         IncomingTransaction txn = new IncomingTransaction();
 
-        // BASIC
         txn.setId(rs.getLong("id"));
         txn.setSourceRef(rs.getString("source_ref"));
 
-        txn.setRawPayload(rs.getString("raw_payload"));
-        txn.setNormalizedPayload(rs.getString("normalized_payload"));
-
-        // CORE
-        txn.setTxnType(TransactionType.valueOf(rs.getString("txn_type")));
         txn.setAmount(rs.getBigDecimal("amount"));
         txn.setGrossAmount(rs.getBigDecimal("gross_amount"));
         txn.setFeeAmount(rs.getBigDecimal("fee_amount"));
+
         txn.setCurrency(rs.getString("currency"));
 
-        Timestamp valueTs = rs.getTimestamp("value_date");
-        if (valueTs != null) {
-            txn.setValueDate(valueTs.toLocalDateTime().toLocalDate());
+        Date valueDate = rs.getDate("value_date");
+        if (valueDate != null) {
+            txn.setValueDate(valueDate.toLocalDate());
         }
 
-        // STATUS
-        txn.setTxnStatus(TransactionStatus.valueOf(rs.getString("txn_status")));
-        txn.setProcessingStatus(ProcessingStatus.valueOf(rs.getString("processing_status")));
-
-        // BANK DETAILS
-        txn.setSenderIfsc(rs.getString("sender_ifsc"));
-        txn.setReceiverIfsc(rs.getString("receiver_ifsc"));
         txn.setSenderBankName(rs.getString("sender_bank_name"));
         txn.setReceiverBankName(rs.getString("receiver_bank_name"));
 
-        txn.setSenderBic(rs.getString("sender_bic"));
-        txn.setReceiverBic(rs.getString("receiver_bic"));
+        txn.setSenderIfsc(rs.getString("sender_ifsc"));
+        txn.setReceiverIfsc(rs.getString("receiver_ifsc"));
 
-        // FINTECH
-        txn.setPartnerName(rs.getString("partner_name"));
-        txn.setMerchantId(rs.getString("merchant_id"));
-
-        // EXTRA
         txn.setChannelCode(rs.getString("channel_code"));
-        txn.setChecksum(rs.getString("checksum"));
-        txn.setErrorMessage(rs.getString("error_message"));
 
-        txn.setPriority(rs.getInt("priority"));
-       // txn.setRetryCount(rs.getInt("retry_count")); // if exists
-
-        // TIMESTAMPS
-        Timestamp ingest = rs.getTimestamp("ingest_timestamp");
-        if (ingest != null) txn.setIngestTimestamp(ingest.toLocalDateTime());
-
-        Timestamp created = rs.getTimestamp("created_at");
-        if (created != null) txn.setCreatedAt(created.toLocalDateTime());
-
-        Timestamp updated = rs.getTimestamp("updated_at");
-        if (updated != null) txn.setUpdatedAt(updated.toLocalDateTime());
-
-        txn.setVersion(rs.getInt("version"));
+        // ✅ ENUM MAPPING (VERY IMPORTANT)
+        txn.setTxnType(TransactionType.valueOf(rs.getString("txn_type")));
+        txn.setTxnStatus(TransactionStatus.valueOf(rs.getString("txn_status")));
+        txn.setProcessingStatus(
+                ProcessingStatus.valueOf(rs.getString("processing_status"))
+        );
 
         return txn;
     }
 
+    // =========================================================
+    // 🔥 SOURCE SYSTEM MAPPING
     // =========================================================
     private Long getSourceSystemId(String channel) {
         switch (channel) {
@@ -174,24 +175,6 @@ public class TransactionDaoImpl implements TransactionDao {
 
     @Override
     public List<IncomingTransaction> getAllTransactions() {
-        return findAll();
+        return findAll(); // ✅ FIX
     }
-
-	@Override
-	public void save(Transaction transaction) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public IncomingTransaction findById(long id) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void delete(Long id) {
-		// TODO Auto-generated method stub
-		
-	}
 }

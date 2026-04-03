@@ -5,6 +5,7 @@ import java.util.List;
 import com.iispl.dao.TransactionDao;
 import com.iispl.dao.TransactionDaoImpl;
 import com.iispl.entity.Account;
+import com.iispl.entity.IncomingTransaction;
 import com.iispl.entity.Transaction;
 
 public class TransactionServiceImpl implements TransactionService {
@@ -27,7 +28,7 @@ public class TransactionServiceImpl implements TransactionService {
         transactionDao.save(transaction);
     }
 
-    public List<Transaction> getAllTransactions() {
+    public List<IncomingTransaction> getAllTransactions() {
         return transactionDao.findAll();
     }
 
