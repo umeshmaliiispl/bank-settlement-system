@@ -1,13 +1,14 @@
 package com.iispl.entity;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 import com.iispl.enums.ProcessingStatus;
 import com.iispl.enums.TransactionStatus;
 import com.iispl.enums.TransactionType;
 
-public class IncomingTransaction extends BaseEntity {
+public final class IncomingTransaction extends BaseEntity {
 
 	private Long incomingTxnId;
 
@@ -46,6 +47,53 @@ public class IncomingTransaction extends BaseEntity {
 	private String channelCode;
 	private String senderBic;
 	private String receiverBic;
+	
+	
+	private Long sourceSystemId;
+	public Long getSourceSystemId() {
+		return sourceSystemId;
+	}
+
+	public void setSourceSystemId(Long sourceSystemId) {
+		this.sourceSystemId = sourceSystemId;
+	}
+
+	public LocalDateTime getCreatedAt() {
+		return createdAt;
+	}
+
+	public void setCreatedAt(LocalDateTime createdAt) {
+		this.createdAt = createdAt;
+	}
+
+	public LocalDateTime getUpdatedAt() {
+		return updatedAt;
+	}
+
+	public void setUpdatedAt(LocalDateTime updatedAt) {
+		this.updatedAt = updatedAt;
+	}
+
+	public String getCreatedBy() {
+		return createdBy;
+	}
+
+	public void setCreatedBy(String createdBy) {
+		this.createdBy = createdBy;
+	}
+
+	public int getVersion() {
+		return version;
+	}
+
+	public void setVersion(int version) {
+		this.version = version;
+	}
+
+	private LocalDateTime createdAt;
+	private LocalDateTime updatedAt;
+	private String createdBy;
+	private int version;
 
 	// PIPELINE CONTROL
 	private int priority;
