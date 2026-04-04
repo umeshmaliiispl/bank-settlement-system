@@ -118,50 +118,126 @@ public class TransactionDaoImpl implements TransactionDao {
 		}
 	}
 
+	
+	@Override
 	public List<IncomingTransaction> findAll() {
 
-		List<IncomingTransaction> list = new ArrayList<>();
+	    List<IncomingTransaction> list = new ArrayList<>();
 
-		String sql = "SELECT * FROM incoming_transaction ORDER BY id DESC";
+	    String sql = "SELECT * FROM incoming_transaction ORDER BY id DESC";
 
-		try (Connection conn = DatabaseConfig.getConnection();
-				PreparedStatement ps = conn.prepareStatement(sql);
-				ResultSet rs = ps.executeQuery()) {
+	    try (Connection conn = DatabaseConfig.getConnection();
+	         PreparedStatement ps = conn.prepareStatement(sql);
+	         ResultSet rs = ps.executeQuery()) {
 
-			while (rs.next()) {
+	        while (rs.next()) {
 
-				IncomingTransaction txn = new IncomingTransaction();
+	            IncomingTransaction txn = new IncomingTransaction();
 
-				txn.setIncomingTxnId(rs.getLong("id"));
-				txn.setSourceRef(rs.getString("source_ref"));
-				txn.setChannelCode(rs.getString("channel_code"));
+	            // PRIMARY
+	            txn.setIncomingTxnId(rs.getLong("id"));
+	            txn.setSourceSystemId(rs.getLong("source_system_id"));
 
-				txn.setSenderIfsc(rs.getString("sender_ifsc"));
-				txn.setReceiverIfsc(rs.getString("receiver_ifsc"));
+	            // SOURCE
+	            txn.setSourceRef(rs.getString("source_ref"));
+	            txn.setRawPayload(rs.getString("raw_payload"));
+	            txn.setNormalizedPayload(rs.getString("normalized_payload"));
+	            txn.setChecksum(rs.getString("checksum"));
 
-				txn.setSenderBankName(rs.getString("sender_bank_name"));
-				txn.setReceiverBankName(rs.getString("receiver_bank_name"));
+	            // CORE
+	            txn.setTxnType(com.iispl.enums.TransactionType.valueOf(rs.getString("txn_type")));
+	            txn.setAmount(rs.getBigDecimal("amount"));
+	            txn.setGrossAmount(rs.getBigDecimal("gross_amount"));
+	            txn.setFeeAmount(rs.getBigDecimal("fee_amount"));
+	            txn.setCurrency(rs.getString("currency"));
 
-				txn.setAmount(rs.getBigDecimal("amount"));
-				txn.setCurrency(rs.getString("currency"));
+	            if (rs.getTimestamp("value_date") != null) {
+	                txn.setValueDate(rs.getTimestamp("value_date").toLocalDateTime());
+	            }
 
-				txn.setTxnStatus(com.iispl.enums.TransactionStatus.valueOf(rs.getString("txn_status")));
+	            // STATUS
+	            txn.setTxnStatus(com.iispl.enums.TransactionStatus.valueOf(rs.getString("txn_status")));
+	            txn.setProcessingStatus(com.iispl.enums.ProcessingStatus.valueOf(rs.getString("processing_status")));
 
-				txn.setProcessingStatus(com.iispl.enums.ProcessingStatus.valueOf(rs.getString("processing_status")));
+	            // BANK DETAILS
+	            txn.setSenderIfsc(rs.getString("sender_ifsc"));
+	            txn.setReceiverIfsc(rs.getString("receiver_ifsc"));
+	            txn.setSenderBankName(rs.getString("sender_bank_name"));
+	            txn.setReceiverBankName(rs.getString("receiver_bank_name"));
+	            txn.setSenderBic(rs.getString("sender_bic"));
+	            txn.setReceiverBic(rs.getString("receiver_bic"));
 
-				txn.setTxnType(com.iispl.enums.TransactionType.valueOf(rs.getString("txn_type")));
+	            // CHANNEL
+	            txn.setChannelCode(rs.getString("channel_code"));
 
-				txn.setErrorMessage(rs.getString("error_message"));
+	            // FINTECH
+	            txn.setPartnerName(rs.getString("partner_name"));
+	            txn.setMerchantId(rs.getString("merchant_id"));
 
-				list.add(txn);
-			}
+	            // PIPELINE
+	            txn.setErrorMessage(rs.getString("error_message"));
+	            txn.setPriority(rs.getInt("priority"));
 
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+	            // AUDIT FIELDS
+	            txn.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+	            txn.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
+	            txn.setCreatedBy(rs.getString("created_by"));
+	            txn.setVersion(rs.getInt("version"));
 
-		return list;
+	            list.add(txn);
+	        }
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+
+	    return list;
 	}
+	
+//	public List<IncomingTransaction> findAll() {
+//
+//		List<IncomingTransaction> list = new ArrayList<>();
+//
+//		String sql = "SELECT * FROM incoming_transaction ORDER BY id DESC";
+//
+//		try (Connection conn = DatabaseConfig.getConnection();
+//				PreparedStatement ps = conn.prepareStatement(sql);
+//				ResultSet rs = ps.executeQuery()) {
+//
+//			while (rs.next()) {
+//
+//				IncomingTransaction txn = new IncomingTransaction();
+//
+//				txn.setIncomingTxnId(rs.getLong("id"));
+//				txn.setSourceRef(rs.getString("source_ref"));
+//				txn.setChannelCode(rs.getString("channel_code"));
+//
+//				txn.setSenderIfsc(rs.getString("sender_ifsc"));
+//				txn.setReceiverIfsc(rs.getString("receiver_ifsc"));
+//
+//				txn.setSenderBankName(rs.getString("sender_bank_name"));
+//				txn.setReceiverBankName(rs.getString("receiver_bank_name"));
+//
+//				txn.setAmount(rs.getBigDecimal("amount"));
+//				txn.setCurrency(rs.getString("currency"));
+//
+//				txn.setTxnStatus(com.iispl.enums.TransactionStatus.valueOf(rs.getString("txn_status")));
+//
+//				txn.setProcessingStatus(com.iispl.enums.ProcessingStatus.valueOf(rs.getString("processing_status")));
+//
+//				txn.setTxnType(com.iispl.enums.TransactionType.valueOf(rs.getString("txn_type")));
+//
+//				txn.setErrorMessage(rs.getString("error_message"));
+//
+//				list.add(txn);
+//			}
+//
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//
+//		return list;
+//	}
 
 	public List<IncomingTransaction> findSuccessfulTransactions() {
 
