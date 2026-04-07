@@ -11,6 +11,7 @@
 	<classpathentry kind="lib" path="lib/postgresql-42.7.3.jar"/>
 	<classpathentry kind="lib" path="C:/DOCS/IISPL/Installations/HikariCP-5.1.0.jar"/>
 	<classpathentry kind="lib" path="C:/DOCS/IISPL/Installations/slf4j-api-2.0.13.jar"/>
-	<classpathentry kind="lib" path="C:/DOCS/IISPL/Installations/slf4j-simple-2.0.13.jar"/>
+	<classpathentry kind="lib" path="C:/DOCS/IISPL/Installations/logback-classic-1.5.30.jar"/>
+	<classpathentry kind="lib" path="C:/DOCS/IISPL/Installations/logback-core-1.5.30.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

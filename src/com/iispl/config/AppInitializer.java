@@ -9,14 +9,14 @@ public class AppInitializer {
         System.out.println("========== INITIALIZING DATABASE ==========");
 
         try {
-            // Only trigger DB connection (NO REPORT)
-            TransactionDao dao = new TransactionDaoImpl();
-            dao.findAll(); // lightweight warm-up
+            // Trigger DB connection 
+            TransactionDao transactionDao = new TransactionDaoImpl();
+            transactionDao.findAll(); // lightweight warm-up
 
-            System.out.println(" Database initialized successfully");
+            System.out.println("Database initialized successfully");
 
         } catch (Exception e) {
-            System.err.println(" Database initialization failed: " + e.getMessage());
+            System.err.println("Database initialization failed: " + e.getMessage());
         }
     }
 }

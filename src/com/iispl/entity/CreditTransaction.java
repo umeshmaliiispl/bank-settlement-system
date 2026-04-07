@@ -10,6 +10,6 @@ public class CreditTransaction extends Transaction {
 
     @Override
     public void execute(Account account) {
-        account.credit(getAmount());  // ✅ correct way
+        account.credit(getAmount());   
     }
 }

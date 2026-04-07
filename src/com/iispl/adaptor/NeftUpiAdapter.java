@@ -14,15 +14,33 @@ import com.iispl.exception.IngestionException;
 import com.iispl.intefaces.TransactionAdapter;
 import com.iispl.validation.PayloadValidator;
 
+/**
+ * NEFT / UPI Adapter — Unified immutable ingestion pipeline.
+ *
+ * <p>
+ * Responsibilities:
+ * <ul>
+ *   <li>Parse CSV-based payload</li>
+ *   <li>Auto-detect source type (NEFT or UPI)</li>
+ *   <li>Transform into canonical IncomingTransaction</li>
+ *   <li>Validate and return immutable result</li>
+ * </ul>
+ *
+ * <p>
+ * Note:
+ * A single adapter handles both NEFT and UPI formats, identified using
+ * source reference prefix ("UPI-").
+ */
 public class NeftUpiAdapter implements TransactionAdapter {
 
-    private static final SourceSystem NEFT_SOURCE = SourceSystem.NEFT();
-    private static final SourceSystem UPI_SOURCE  = SourceSystem.UPI();
+    /** Source system references */
+    private static final SourceSystem neftSourceSystem = SourceSystem.NEFT();
+    private static final SourceSystem upiSourceSystem  = SourceSystem.UPI();
 
     @Override
     public IncomingTransaction adapt(String rawPayload) {
 
-        // ── Guard ─────────────────────────────
+        // ── Input Validation (Fail-Fast Guard) ───────────────────────────────
         if (rawPayload == null || rawPayload.trim().isEmpty()) {
             throw new IngestionException(
                     IngestionException.ERR_NULL_PAYLOAD,
@@ -32,173 +50,224 @@ public class NeftUpiAdapter implements TransactionAdapter {
             );
         }
 
-        // ── Parse CSV ─────────────────────────
-        String[] f = rawPayload.split(",", -1);
+        // ── Parse CSV Payload ────────────────────────────────────────────────
+        String[] payloadFields = rawPayload.split(",", -1);
 
-        boolean isUpi = f[0].toUpperCase().startsWith("UPI-");
-        SourceType sourceType = isUpi ? SourceType.UPI : SourceType.NEFT;
+        boolean isUpiTransaction =
+                payloadFields[0].toUpperCase().startsWith("UPI-");
 
-        if (f.length < 10) {
+        SourceType detectedSourceType =
+                isUpiTransaction ? SourceType.UPI : SourceType.NEFT;
+
+        if (payloadFields.length < 10) {
             throw new IngestionException(
                     IngestionException.ERR_INVALID_FORMAT,
-                    sourceType,
+                    detectedSourceType,
                     rawPayload,
-                    "Expected 10 CSV fields, got: " + f.length
+                    "Expected 10 CSV fields, got: " + payloadFields.length
             );
         }
 
-        IncomingTransaction txn = new IncomingTransaction();
-
-        // ── Source Info ───────────────────────
-        txn.setSourceSystem(isUpi ? UPI_SOURCE : NEFT_SOURCE);
-        txn.setChannelCode(isUpi ? "UPI" : "NEFT");
-        txn.setRawPayload(rawPayload);
-        txn.setChecksum(sha256(rawPayload));
-        txn.setCreatedBy(isUpi ? "UPI-ADAPTER" : "NEFT-ADAPTER");
-
-        // ── Core Mapping ─────────────────────
-        txn.setSourceRef(trim(f[0]));
-
-        txn.setTxnType(
-                TransactionType.valueOf(trim(f[1]).toUpperCase())
-        );
-
-        txn.setSenderCustomerId(trim(f[2]));
-        txn.setSenderAccount(trim(f[3]));
-
-        txn.setReceiverCustomerId(trim(f[4]));
-        txn.setReceiverAccount(trim(f[5]));
-
-        txn.setSenderIfsc(txn.getSenderAccount());
-        txn.setReceiverIfsc(txn.getReceiverAccount());
-
-        // ── Amount ───────────────────────────
-        txn.setAmount(new BigDecimal(trim(f[6])));
-        txn.setGrossAmount(txn.getAmount());
-        txn.setFeeAmount(BigDecimal.ZERO);
-
-        txn.setCurrency(trim(f[7]).toUpperCase());
-
-        // 🔥 FIXED: STORE FULL TIMESTAMP
-        LocalDateTime txnTime;
-
+        // ── Timestamp Parsing ────────────────────────────────────────────────
+        LocalDateTime transactionTimestamp;
         try {
-            txnTime = LocalDateTime.parse(trim(f[8]).replace(" ", "T"));
-        } catch (Exception e) {
+            transactionTimestamp = LocalDateTime.parse(
+                    safeTrim(payloadFields[8]).replace(" ", "T")
+            );
+        } catch (Exception exception) {
             throw new IngestionException(
                     IngestionException.ERR_INVALID_FORMAT,
-                    sourceType,
+                    detectedSourceType,
                     rawPayload,
-                    "Invalid timestamp: " + f[8]
+                    "Invalid timestamp: " + payloadFields[8]
             );
         }
 
-        txn.setValueDate(txnTime); // ✅ FULL LocalDateTime
+        // ── Extract Core Transaction Fields ──────────────────────────────────
+        String senderAccountNumber   = safeTrim(payloadFields[3]);
+        String receiverAccountNumber = safeTrim(payloadFields[5]);
 
-        // ── STATUS ───────────────────────────
-        txn.setTxnStatus(
-                TransactionStatus.valueOf(trim(f[9]).toUpperCase())
+        BigDecimal transactionAmount =
+                new BigDecimal(safeTrim(payloadFields[6]));
+
+        String channelCode      = isUpiTransaction ? "UPI" : "NEFT";
+        String transactionRef   = safeTrim(payloadFields[0]);
+        String currencyCode     = safeTrim(payloadFields[7]).toUpperCase();
+
+        TransactionType transactionType =
+                TransactionType.valueOf(
+                        safeTrim(payloadFields[1]).toUpperCase()
+                );
+
+        TransactionStatus transactionStatus =
+                TransactionStatus.valueOf(
+                        safeTrim(payloadFields[9]).toUpperCase()
+                );
+
+        // ── Normalized Payload Construction ──────────────────────────────────
+        String normalizedPayloadJson = buildNormalizedPayload(
+                transactionRef,
+                channelCode,
+                transactionType,
+                safeTrim(payloadFields[2]),
+                senderAccountNumber,
+                safeTrim(payloadFields[4]),
+                receiverAccountNumber,
+                transactionAmount,
+                currencyCode,
+                transactionTimestamp,
+                transactionStatus
         );
 
-        // ── Bank Names ───────────────────────
-        txn.setSenderBankName(
-                BankNameResolver.fromIfsc(txn.getSenderIfsc()));
+        // ── Build Immutable Transaction Object ───────────────────────────────
+        IncomingTransaction initialTransaction = new IncomingTransaction.Builder()
+                .sourceSystem(isUpiTransaction ? upiSourceSystem : neftSourceSystem)
+                .channelCode(channelCode)
+                .rawPayload(rawPayload)
+                .checksum(generateSha256Checksum(rawPayload))
+                .createdBy(isUpiTransaction ? "UPI-ADAPTER" : "NEFT-ADAPTER")
 
-        txn.setReceiverBankName(
-                BankNameResolver.fromIfsc(txn.getReceiverIfsc()));
+                .sourceRef(transactionRef)
+                .txnType(transactionType)
 
-        // ── Priority ─────────────────────────
-        txn.setPriority(isUpi ? 6 : 4);
+                .senderCustomerId(safeTrim(payloadFields[2]))
+                .senderAccount(senderAccountNumber)
+                .senderIfsc(senderAccountNumber)
 
-        // ── Normalized Payload ───────────────
-        txn.setNormalizedPayload(buildNormalized(txn));
+                .receiverCustomerId(safeTrim(payloadFields[4]))
+                .receiverAccount(receiverAccountNumber)
+                .receiverIfsc(receiverAccountNumber)
 
-        // ── Validation ───────────────────────
-        PayloadValidator.ValidationResult vr =
-                PayloadValidator.validate(txn, sourceType);
+                .amount(transactionAmount)
+                .grossAmount(transactionAmount)
+                .feeAmount(BigDecimal.ZERO)
 
-        if (!vr.isPassed()) {
-            txn.setProcessingStatus(ProcessingStatus.FAILED);
-            txn.setErrorMessage(vr.getErrorSummary());
-            System.err.println("  [" + txn.getChannelCode() + "-ADAPTER][FAIL] " + vr);
+                .currency(currencyCode)
+                .valueDate(transactionTimestamp)
+
+                .txnStatus(transactionStatus)
+
+                .senderBankName(BankNameResolver.fromIfsc(senderAccountNumber))
+                .receiverBankName(BankNameResolver.fromIfsc(receiverAccountNumber))
+
+                .priority(isUpiTransaction ? 6 : 4)
+                .normalizedPayload(normalizedPayloadJson)
+                .build();
+
+        // ── Validation Phase ─────────────────────────────────────────────────
+        PayloadValidator.ValidationResult validationResult =
+                PayloadValidator.validate(initialTransaction, detectedSourceType);
+
+        IncomingTransaction finalTransaction;
+
+        if (!validationResult.isPassed()) {
+
+            System.err.println("  [" + channelCode + "-ADAPTER][FAIL] " + validationResult);
+
+            finalTransaction = initialTransaction.toBuilder()
+                    .processingStatus(ProcessingStatus.FAILED)
+                    .errorMessage(validationResult.getErrorSummary())
+                    .build();
+
         } else {
-            txn.setProcessingStatus(ProcessingStatus.VALIDATED);
 
-            if (txn.getTxnStatus() == TransactionStatus.SUCCESS) {
-                txn.setProcessingStatus(ProcessingStatus.QUEUED);
+            ProcessingStatus processingStatus = ProcessingStatus.VALIDATED;
 
-                if (isUpi) {
-                    UPI_SOURCE.recordSuccess();
+            if (initialTransaction.getTxnStatus() == TransactionStatus.SUCCESS) {
+                processingStatus = ProcessingStatus.QUEUED;
+
+                if (isUpiTransaction) {
+                    upiSourceSystem.recordSuccess();
                 } else {
-                    NEFT_SOURCE.recordSuccess();
+                    neftSourceSystem.recordSuccess();
                 }
             }
+
+            finalTransaction = initialTransaction.toBuilder()
+                    .processingStatus(processingStatus)
+                    .build();
         }
 
-        System.out.printf(
-        	    "[ADAPTER ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | STATUS=%-8s/%-10s%n",
-        	    Thread.currentThread().getName(),
-        	    safe(txn.getChannelCode()),
-        	    safe(txn.getSourceRef()),
-        	    formatAmount(txn.getAmount()),
-        	    safe(txn.getCurrency()),
-        	    safe(txn.getTxnStatus()),
-        	    safe(txn.getProcessingStatus())
-        	);
-        
-        return txn;
+        // ── Logging ─────────────────────────────────────────────────────────
+        logTransaction(finalTransaction);
+
+        return finalTransaction;
     }
-    
 
-	private String formatAmount(java.math.BigDecimal amt) {
-		if (amt == null)
-			return "0.00";
-		return String.format("%,.2f", amt);
-	}
-
-	private String safe(Object val) {
-		return val == null ? "N/A" : val.toString();
-	}
     @Override
     public SourceType getSourceType() {
         return SourceType.NEFT;
     }
 
-    // ─────────────────────────────
-    // NORMALIZED FORMAT
-    // ─────────────────────────────
-    private String buildNormalized(IncomingTransaction txn) {
+    // ── Normalized Payload Builder ──────────────────────────────────────────
+    private String buildNormalizedPayload(
+            String transactionReference,
+            String channelCode,
+            TransactionType transactionType,
+            String senderCustomerId,
+            String senderAccountNumber,
+            String receiverCustomerId,
+            String receiverAccountNumber,
+            BigDecimal transactionAmount,
+            String currencyCode,
+            LocalDateTime transactionTimestamp,
+            TransactionStatus transactionStatus) {
+
         return "{"
-                + "\"txn_id\":\"" + txn.getSourceRef() + "\","
-                + "\"channel\":\"" + txn.getChannelCode() + "\","
-                + "\"txn_type\":\"" + txn.getTxnType() + "\","
-                + "\"sender_cid\":\"" + txn.getSenderCustomerId() + "\","
-                + "\"sender_acc\":\"" + txn.getSenderAccount() + "\","
-                + "\"receiver_cid\":\"" + txn.getReceiverCustomerId() + "\","
-                + "\"receiver_acc\":\"" + txn.getReceiverAccount() + "\","
-                + "\"amount\":" + txn.getAmount() + ","
-                + "\"currency\":\"" + txn.getCurrency() + "\","
-                + "\"txn_timestamp\":\"" + txn.getValueDate() + "\","
-                + "\"status\":\"" + txn.getTxnStatus() + "\""
+                + "\"txn_id\":\"" + transactionReference + "\","
+                + "\"channel\":\"" + channelCode + "\","
+                + "\"txn_type\":\"" + transactionType + "\","
+                + "\"sender_cid\":\"" + senderCustomerId + "\","
+                + "\"sender_acc\":\"" + senderAccountNumber + "\","
+                + "\"receiver_cid\":\"" + receiverCustomerId + "\","
+                + "\"receiver_acc\":\"" + receiverAccountNumber + "\","
+                + "\"amount\":" + transactionAmount + ","
+                + "\"currency\":\"" + currencyCode + "\","
+                + "\"txn_timestamp\":\"" + transactionTimestamp + "\","
+                + "\"status\":\"" + transactionStatus + "\""
                 + "}";
     }
 
-    // ─────────────────────────────
-    // HELPERS
-    // ─────────────────────────────
-    private static String trim(String s) {
-        return s == null ? "" : s.trim();
+    // ── Logging ─────────────────────────────────────────────────────────────
+    private void logTransaction(IncomingTransaction transaction) {
+        System.out.printf(
+                "[ADAPTER ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | STATUS=%-8s/%-10s%n",
+                Thread.currentThread().getName(),
+                safeToString(transaction.getChannelCode()),
+                safeToString(transaction.getSourceRef()),
+                formatAmount(transaction.getAmount()),
+                safeToString(transaction.getCurrency()),
+                safeToString(transaction.getTxnStatus()),
+                safeToString(transaction.getProcessingStatus())
+        );
     }
 
-    private static String sha256(String input) {
+    // ── Helper Methods ──────────────────────────────────────────────────────
+    private static String safeTrim(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private static String safeToString(Object value) {
+        return value == null ? "N/A" : value.toString();
+    }
+
+    private static String formatAmount(BigDecimal amount) {
+        return amount == null ? "0.00" : String.format("%,.2f", amount);
+    }
+
+    private static String generateSha256Checksum(String input) {
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(input.getBytes("UTF-8"));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash)
-                sb.append(String.format("%02x", b));
-            return sb.toString();
-        } catch (Exception e) {
+            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = messageDigest.digest(input.getBytes("UTF-8"));
+
+            StringBuilder hexBuilder = new StringBuilder();
+            for (byte hashByte : hashBytes) {
+                hexBuilder.append(String.format("%02x", hashByte));
+            }
+
+            return hexBuilder.toString();
+
+        } catch (Exception exception) {
             return "CHECKSUM-ERROR";
         }
     }

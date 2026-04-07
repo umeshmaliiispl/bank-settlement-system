@@ -25,18 +25,15 @@ public abstract class BaseEntity implements Auditable, Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	// Thread-safe ID generator (simulates DB sequence in pure Java)
+	// Thread-safe ID generator 
 	private static final AtomicLong ID_SEQ = new AtomicLong(1000L);
 
-	// ── Audit fields ──────────────────────────────────────────────────────────
 	protected Long id;
 	protected LocalDateTime createdAt;
 	protected LocalDateTime updatedAt;
 	protected String createdBy;
-	protected int version; // optimistic lock — increment on every UPDATE
-
-	// ── Constructors ──────────────────────────────────────────────────────────
-
+	protected int version; 
+	
 	protected BaseEntity() {
 		this.id = ID_SEQ.getAndIncrement();
 		this.createdAt = LocalDateTime.now();
@@ -49,8 +46,7 @@ public abstract class BaseEntity implements Auditable, Serializable {
 		this.createdBy = createdBy;
 	}
 
-	// ── Auditable implementation ──────────────────────────────────────────────
-
+	// Auditable implementation 
 	@Override
 	public LocalDateTime getCreatedAt() {
 		return createdAt;
@@ -72,7 +68,6 @@ public abstract class BaseEntity implements Auditable, Serializable {
 		this.version++;
 	}
 
-	// ── Getters & Setters ─────────────────────────────────────────────────────
 
 	public Long getId() {
 		return id;
@@ -102,8 +97,7 @@ public abstract class BaseEntity implements Auditable, Serializable {
 		this.version = v;
 	}
 
-	// ── Object overrides ──────────────────────────────────────────────────────
-
+	// Object overrides 
 	@Override
 	public boolean equals(Object o) {
 		if (this == o)

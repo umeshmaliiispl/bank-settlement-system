@@ -17,10 +17,6 @@ public class SettlementInstruction {
 
 	private LocalDate valueDate;
 
-	// ─────────────────────────────────────────────
-	// GETTERS & SETTERS
-	// ─────────────────────────────────────────────
-
 	public String getInstructionId() {
 		return instructionId;
 	}
