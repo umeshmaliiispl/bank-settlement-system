@@ -206,54 +206,54 @@ public class TransactionDaoImpl implements TransactionDao {
             default:        return 1L;
         }
     }
-}
 
-	@Override
-	public void save(IncomingTransaction transaction) {
-
-		try (Connection connection = DatabaseConfig.getConnection();
-				PreparedStatement preparedStatement = connection.prepareStatement(INSERT_SQL)) {
-
-			preparedStatement.setLong(1, resolveSourceSystemId(transaction.getChannelCode()));
-			preparedStatement.setString(2, transaction.getSourceRef());
-			preparedStatement.setString(3, transaction.getRawPayload());
-			preparedStatement.setString(4, transaction.getNormalizedPayload());
-
-			preparedStatement.setString(5, transaction.getTxnType().name());
-			preparedStatement.setBigDecimal(6, transaction.getAmount());
-			preparedStatement.setBigDecimal(7, transaction.getGrossAmount());
-			preparedStatement.setBigDecimal(8, transaction.getFeeAmount());
-			preparedStatement.setString(9, transaction.getCurrency());
-
-			preparedStatement.setTimestamp(10, java.sql.Timestamp.valueOf(transaction.getValueDate()));
-
-			preparedStatement.setString(11, transaction.getTxnStatus().name());
-			preparedStatement.setString(12, transaction.getProcessingStatus().name());
-
-			preparedStatement.setString(13, transaction.getSenderIfsc());
-			preparedStatement.setString(14, transaction.getReceiverIfsc());
-
-			preparedStatement.setString(15, transaction.getSenderBankName());
-			preparedStatement.setString(16, transaction.getReceiverBankName());
-
-			preparedStatement.setString(17, transaction.getSenderBic());
-			preparedStatement.setString(18, transaction.getReceiverBic());
-
-			preparedStatement.setString(19, transaction.getPartnerName());
-			preparedStatement.setString(20, transaction.getMerchantId());
-
-			preparedStatement.setString(21, transaction.getChannelCode());
-			preparedStatement.setString(22, transaction.getChecksum());
-			preparedStatement.setString(23, transaction.getErrorMessage());
-
-			preparedStatement.executeUpdate();
-
-		} catch (Exception exception) {
-
-			throw new DatabaseInsertException("Database insert failed for reference: " + transaction.getSourceRef(),
-					exception, transaction);
-		}
-	}
+//
+//	@Override
+//	public void save(IncomingTransaction transaction) {
+//
+//		try (Connection connection = DatabaseConfig.getConnection();
+//				PreparedStatement preparedStatement = connection.prepareStatement(INSERT_SQL)) {
+//
+//			preparedStatement.setLong(1, resolveSourceSystemId(transaction.getChannelCode()));
+//			preparedStatement.setString(2, transaction.getSourceRef());
+//			preparedStatement.setString(3, transaction.getRawPayload());
+//			preparedStatement.setString(4, transaction.getNormalizedPayload());
+//
+//			preparedStatement.setString(5, transaction.getTxnType().name());
+//			preparedStatement.setBigDecimal(6, transaction.getAmount());
+//			preparedStatement.setBigDecimal(7, transaction.getGrossAmount());
+//			preparedStatement.setBigDecimal(8, transaction.getFeeAmount());
+//			preparedStatement.setString(9, transaction.getCurrency());
+//
+//			preparedStatement.setTimestamp(10, java.sql.Timestamp.valueOf(transaction.getValueDate()));
+//
+//			preparedStatement.setString(11, transaction.getTxnStatus().name());
+//			preparedStatement.setString(12, transaction.getProcessingStatus().name());
+//
+//			preparedStatement.setString(13, transaction.getSenderIfsc());
+//			preparedStatement.setString(14, transaction.getReceiverIfsc());
+//
+//			preparedStatement.setString(15, transaction.getSenderBankName());
+//			preparedStatement.setString(16, transaction.getReceiverBankName());
+//
+//			preparedStatement.setString(17, transaction.getSenderBic());
+//			preparedStatement.setString(18, transaction.getReceiverBic());
+//
+//			preparedStatement.setString(19, transaction.getPartnerName());
+//			preparedStatement.setString(20, transaction.getMerchantId());
+//
+//			preparedStatement.setString(21, transaction.getChannelCode());
+//			preparedStatement.setString(22, transaction.getChecksum());
+//			preparedStatement.setString(23, transaction.getErrorMessage());
+//
+//			preparedStatement.executeUpdate();
+//
+//		} catch (Exception exception) {
+//
+//			throw new DatabaseInsertException("Database insert failed for reference: " + transaction.getSourceRef(),
+//					exception, transaction);
+//		}
+//	}
 
 	/**
 	 * @return true if inserted, false if duplicate skipped
@@ -306,136 +306,136 @@ public class TransactionDaoImpl implements TransactionDao {
 	}
 
 	
-	@Override
-	public List<IncomingTransaction> findAll() {
+	//@Override
+//	public List<IncomingTransaction> findAll() {
+//
+//	    List<IncomingTransaction> list = new ArrayList<>();
+//
+//	    String sql = "SELECT * FROM incoming_transaction ORDER BY id DESC";
+//
+//	    try (Connection conn = DatabaseConfig.getConnection();
+//	         PreparedStatement ps = conn.prepareStatement(sql);
+//	         ResultSet rs = ps.executeQuery()) {
+//
+//	        while (rs.next()) {
+//
+//	            IncomingTransaction txn = new IncomingTransaction();
+//
+//	            // PRIMARY
+//	            txn.setIncomingTxnId(rs.getLong("id"));
+//	            txn.setSourceSystemId(rs.getLong("source_system_id"));
+//
+//	            // SOURCE
+//	            txn.setSourceRef(rs.getString("source_ref"));
+//	            txn.setRawPayload(rs.getString("raw_payload"));
+//	            txn.setNormalizedPayload(rs.getString("normalized_payload"));
+//	            txn.setChecksum(rs.getString("checksum"));
+//
+//	            // CORE
+//	            txn.setTxnType(com.iispl.enums.TransactionType.valueOf(rs.getString("txn_type")));
+//	            txn.setAmount(rs.getBigDecimal("amount"));
+//	            txn.setGrossAmount(rs.getBigDecimal("gross_amount"));
+//	            txn.setFeeAmount(rs.getBigDecimal("fee_amount"));
+//	            txn.setCurrency(rs.getString("currency"));
+//
+//	            if (rs.getTimestamp("value_date") != null) {
+//	                txn.setValueDate(rs.getTimestamp("value_date").toLocalDateTime());
+//	            }
+//
+//	            // STATUS
+//	            txn.setTxnStatus(com.iispl.enums.TransactionStatus.valueOf(rs.getString("txn_status")));
+//	            txn.setProcessingStatus(com.iispl.enums.ProcessingStatus.valueOf(rs.getString("processing_status")));
+//
+//	            // BANK DETAILS
+//	            txn.setSenderIfsc(rs.getString("sender_ifsc"));
+//	            txn.setReceiverIfsc(rs.getString("receiver_ifsc"));
+//	            txn.setSenderBankName(rs.getString("sender_bank_name"));
+//	            txn.setReceiverBankName(rs.getString("receiver_bank_name"));
+//	            txn.setSenderBic(rs.getString("sender_bic"));
+//	            txn.setReceiverBic(rs.getString("receiver_bic"));
+//
+//	            // CHANNEL
+//	            txn.setChannelCode(rs.getString("channel_code"));
+//
+//	            // FINTECH
+//	            txn.setPartnerName(rs.getString("partner_name"));
+//	            txn.setMerchantId(rs.getString("merchant_id"));
+//
+//	            // PIPELINE
+//	            txn.setErrorMessage(rs.getString("error_message"));
+//	            txn.setPriority(rs.getInt("priority"));
+//
+//	            // AUDIT FIELDS
+//	            txn.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+//	            txn.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
+//	            txn.setCreatedBy(rs.getString("created_by"));
+//	            txn.setVersion(rs.getInt("version"));
+//
+//	            list.add(txn);
+//	        }
+//
+//	    } catch (Exception e) {
+//	        e.printStackTrace();
+//	    }
+//
+//	    return list;
+//	}
 
-	    List<IncomingTransaction> list = new ArrayList<>();
+//	public List<IncomingTransaction> findSuccessfulTransactions() {
+//
+//		List<IncomingTransaction> list = new ArrayList<>();
+//
+//		String sql = "SELECT * FROM incoming_transaction WHERE txn_status = 'SUCCESS'";
+//
+//		try (Connection conn = DatabaseConfig.getConnection();
+//				PreparedStatement ps = conn.prepareStatement(sql);
+//				ResultSet rs = ps.executeQuery()) {
+//
+//			while (rs.next()) {
+//
+//				IncomingTransaction txn = new IncomingTransaction();
+//
+//				txn.setIncomingTxnId(rs.getLong("id"));
+//				txn.setSourceRef(rs.getString("source_ref"));
+//				txn.setSenderBankName(rs.getString("sender_bank_name"));
+//				txn.setReceiverBankName(rs.getString("receiver_bank_name"));
+//				txn.setChannelCode(rs.getString("channel_code"));
+//
+//				txn.setAmount(rs.getBigDecimal("amount"));
+//				txn.setCurrency(rs.getString("currency"));
+//
+//				txn.setTxnStatus(com.iispl.enums.TransactionStatus.valueOf(rs.getString("txn_status")));
+//
+//				txn.setProcessingStatus(com.iispl.enums.ProcessingStatus.valueOf(rs.getString("processing_status")));
+//
+//				txn.setTxnType(com.iispl.enums.TransactionType.valueOf(rs.getString("txn_type")));
+//
+//				list.add(txn);
+//			}
+//
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//
+//		return list;
+//	}
 
-	    String sql = "SELECT * FROM incoming_transaction ORDER BY id DESC";
-
-	    try (Connection conn = DatabaseConfig.getConnection();
-	         PreparedStatement ps = conn.prepareStatement(sql);
-	         ResultSet rs = ps.executeQuery()) {
-
-	        while (rs.next()) {
-
-	            IncomingTransaction txn = new IncomingTransaction();
-
-	            // PRIMARY
-	            txn.setIncomingTxnId(rs.getLong("id"));
-	            txn.setSourceSystemId(rs.getLong("source_system_id"));
-
-	            // SOURCE
-	            txn.setSourceRef(rs.getString("source_ref"));
-	            txn.setRawPayload(rs.getString("raw_payload"));
-	            txn.setNormalizedPayload(rs.getString("normalized_payload"));
-	            txn.setChecksum(rs.getString("checksum"));
-
-	            // CORE
-	            txn.setTxnType(com.iispl.enums.TransactionType.valueOf(rs.getString("txn_type")));
-	            txn.setAmount(rs.getBigDecimal("amount"));
-	            txn.setGrossAmount(rs.getBigDecimal("gross_amount"));
-	            txn.setFeeAmount(rs.getBigDecimal("fee_amount"));
-	            txn.setCurrency(rs.getString("currency"));
-
-	            if (rs.getTimestamp("value_date") != null) {
-	                txn.setValueDate(rs.getTimestamp("value_date").toLocalDateTime());
-	            }
-
-	            // STATUS
-	            txn.setTxnStatus(com.iispl.enums.TransactionStatus.valueOf(rs.getString("txn_status")));
-	            txn.setProcessingStatus(com.iispl.enums.ProcessingStatus.valueOf(rs.getString("processing_status")));
-
-	            // BANK DETAILS
-	            txn.setSenderIfsc(rs.getString("sender_ifsc"));
-	            txn.setReceiverIfsc(rs.getString("receiver_ifsc"));
-	            txn.setSenderBankName(rs.getString("sender_bank_name"));
-	            txn.setReceiverBankName(rs.getString("receiver_bank_name"));
-	            txn.setSenderBic(rs.getString("sender_bic"));
-	            txn.setReceiverBic(rs.getString("receiver_bic"));
-
-	            // CHANNEL
-	            txn.setChannelCode(rs.getString("channel_code"));
-
-	            // FINTECH
-	            txn.setPartnerName(rs.getString("partner_name"));
-	            txn.setMerchantId(rs.getString("merchant_id"));
-
-	            // PIPELINE
-	            txn.setErrorMessage(rs.getString("error_message"));
-	            txn.setPriority(rs.getInt("priority"));
-
-	            // AUDIT FIELDS
-	            txn.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
-	            txn.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
-	            txn.setCreatedBy(rs.getString("created_by"));
-	            txn.setVersion(rs.getInt("version"));
-
-	            list.add(txn);
-	        }
-
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	    }
-
-	    return list;
-	}
-
-	public List<IncomingTransaction> findSuccessfulTransactions() {
-
-		List<IncomingTransaction> list = new ArrayList<>();
-
-		String sql = "SELECT * FROM incoming_transaction WHERE txn_status = 'SUCCESS'";
-
-		try (Connection conn = DatabaseConfig.getConnection();
-				PreparedStatement ps = conn.prepareStatement(sql);
-				ResultSet rs = ps.executeQuery()) {
-
-			while (rs.next()) {
-
-				IncomingTransaction txn = new IncomingTransaction();
-
-				txn.setIncomingTxnId(rs.getLong("id"));
-				txn.setSourceRef(rs.getString("source_ref"));
-				txn.setSenderBankName(rs.getString("sender_bank_name"));
-				txn.setReceiverBankName(rs.getString("receiver_bank_name"));
-				txn.setChannelCode(rs.getString("channel_code"));
-
-				txn.setAmount(rs.getBigDecimal("amount"));
-				txn.setCurrency(rs.getString("currency"));
-
-				txn.setTxnStatus(com.iispl.enums.TransactionStatus.valueOf(rs.getString("txn_status")));
-
-				txn.setProcessingStatus(com.iispl.enums.ProcessingStatus.valueOf(rs.getString("processing_status")));
-
-				txn.setTxnType(com.iispl.enums.TransactionType.valueOf(rs.getString("txn_type")));
-
-				list.add(txn);
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		return list;
-	}
-
-	private Long resolveSourceSystemId(String channelCode) {
-		switch (channelCode) {
-		case "CBS":
-			return 1L;
-		case "NEFT":
-			return 2L;
-		case "UPI":
-			return 3L;
-		case "RTGS":
-			return 4L;
-		case "SWIFT":
-			return 5L;
-		case "FINTECH":
-			return 6L;
-		default:
-			return 1L;
-		}
-	}
+//	private Long resolveSourceSystemId(String channelCode) {
+//		switch (channelCode) {
+//		case "CBS":
+//			return 1L;
+//		case "NEFT":
+//			return 2L;
+//		case "UPI":
+//			return 3L;
+//		case "RTGS":
+//			return 4L;
+//		case "SWIFT":
+//			return 5L;
+//		case "FINTECH":
+//			return 6L;
+//		default:
+//			return 1L;
+//		}
+//	}
 }
