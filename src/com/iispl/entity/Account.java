@@ -8,9 +8,10 @@ import com.iispl.enums.AccountType;
 /**
  * Account Entity (Used for lookup + settlement)
  */
+
 public class Account extends BaseEntity {
 
-	private String accountNumber; // Used for lookup
+	private String accountNumber; 
 	private String ifscCode;
 	private String bankName;
 
@@ -40,7 +41,6 @@ public class Account extends BaseEntity {
 		this.accountStatus = accountStatus;
 	}
 
-	// Business Methods
 	public synchronized void credit(BigDecimal amount) {
 		this.balance = this.balance.add(amount);
 		markUpdated();
@@ -54,7 +54,7 @@ public class Account extends BaseEntity {
 		markUpdated();
 	}
 
-	// Getters
+
 	public String getAccountNumber() {
 		return accountNumber;
 	}

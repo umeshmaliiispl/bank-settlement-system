@@ -4,88 +4,80 @@ import com.iispl.enums.NetDirection;
 
 public class NettingPosition {
 
-    private String bankName;
-    private String currency;
+	private String bankName;
+	private String currency;
 
-    private double grossDebitAmount;
-    private double grossCreditAmount;
-    private double netAmount;
+	private double grossDebitAmount;
+	private double grossCreditAmount;
+	private double netAmount;
 
-    private NetDirection direction;
+	private NetDirection direction;
 
-    // ─────────────────────────────────────────────
-    // BUSINESS METHODS
-    // ─────────────────────────────────────────────
+	public void addDebit(double amount) {
+		this.grossDebitAmount += amount;
+	}
 
-    public void addDebit(double amount) {
-        this.grossDebitAmount += amount;
-    }
+	public void addCredit(double amount) {
+		this.grossCreditAmount += amount;
+	}
 
-    public void addCredit(double amount) {
-        this.grossCreditAmount += amount;
-    }
+	public void calculateNet() {
+		this.netAmount = grossCreditAmount - grossDebitAmount;
 
-    public void calculateNet() {
-        this.netAmount = grossCreditAmount - grossDebitAmount;
+		if (netAmount > 0) {
+			direction = NetDirection.NET_CREDIT;
+		} else if (netAmount < 0) {
+			direction = NetDirection.NET_DEBIT;
+		} else {
+			direction = NetDirection.FLAT;
+		}
+	}
 
-        if (netAmount > 0) {
-            direction = NetDirection.NET_CREDIT;
-        } else if (netAmount < 0) {
-            direction = NetDirection.NET_DEBIT;
-        } else {
-            direction = NetDirection.FLAT;
-        }
-    }
+	public String getBankName() {
+		return bankName;
+	}
 
-    // ─────────────────────────────────────────────
-    // GETTERS & SETTERS
-    // ─────────────────────────────────────────────
+	public void setBankName(String bankName) {
+		this.bankName = bankName;
+	}
 
-    public String getBankName() {
-        return bankName;
-    }
+	public String getCurrency() {
+		return currency;
+	}
 
-    public void setBankName(String bankName) {
-        this.bankName = bankName;
-    }
+	public void setCurrency(String currency) {
+		this.currency = currency;
+	}
 
-    public String getCurrency() {
-        return currency;
-    }
+	public double getGrossDebitAmount() {
+		return grossDebitAmount;
+	}
 
-    public void setCurrency(String currency) {
-        this.currency = currency;
-    }
+	public void setGrossDebitAmount(double grossDebitAmount) {
+		this.grossDebitAmount = grossDebitAmount;
+	}
 
-    public double getGrossDebitAmount() {
-        return grossDebitAmount;
-    }
+	public double getGrossCreditAmount() {
+		return grossCreditAmount;
+	}
 
-    public void setGrossDebitAmount(double grossDebitAmount) {
-        this.grossDebitAmount = grossDebitAmount;
-    }
+	public void setGrossCreditAmount(double grossCreditAmount) {
+		this.grossCreditAmount = grossCreditAmount;
+	}
 
-    public double getGrossCreditAmount() {
-        return grossCreditAmount;
-    }
+	public double getNetAmount() {
+		return netAmount;
+	}
 
-    public void setGrossCreditAmount(double grossCreditAmount) {
-        this.grossCreditAmount = grossCreditAmount;
-    }
+	public void setNetAmount(double netAmount) {
+		this.netAmount = netAmount;
+	}
 
-    public double getNetAmount() {
-        return netAmount;
-    }
+	public NetDirection getDirection() {
+		return direction;
+	}
 
-    public void setNetAmount(double netAmount) {
-        this.netAmount = netAmount;
-    }
-
-    public NetDirection getDirection() {
-        return direction;
-    }
-
-    public void setDirection(NetDirection direction) {
-        this.direction = direction;
-    }
+	public void setDirection(NetDirection direction) {
+		this.direction = direction;
+	}
 }

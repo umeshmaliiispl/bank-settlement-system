@@ -18,9 +18,9 @@
 //		this.receiverAccount = receiverAccount;
 //	}
 //
-//	@Override
-//	public void execute(Account account) {
-//		BigDecimal newBal = account.getBalance().subtract(getAmount());
-//		account.setBalance(newBal);
-//	}
+////	@Override
+////	public void execute(Account account) {
+////		BigDecimal newBal = account.getBalance().subtract(getAmount());
+////		account.setBalance(newBal);
+////	}
 //}

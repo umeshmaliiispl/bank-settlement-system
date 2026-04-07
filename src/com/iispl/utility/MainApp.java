@@ -2,9 +2,11 @@ package com.iispl.utility;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.iispl.adaptor.AdapterRegistry;
 import com.iispl.config.AppInitializer;
@@ -18,186 +20,110 @@ import com.iispl.service.TransactionServiceImpl;
 
 public class MainApp {
 
-	private static final TransactionService transactionService = new TransactionServiceImpl();
-	private static final AdapterRegistry adapterRegistry = AdapterRegistry.getInstance();
-	private static final List<IncomingTransaction> auditList = new ArrayList<>();
+    private static final Logger log = LoggerFactory.getLogger(MainApp.class);
 
-	public static void main(String[] args) {
+    private static final TransactionService transactionService = new TransactionServiceImpl();
+    private static final AdapterRegistry adapterRegistry = AdapterRegistry.getInstance();
+    private static final List<IncomingTransaction> auditList = new ArrayList<>();
 
-		System.out.println("========== MULTI-THREADED INGESTION PIPELINE ==========");
-		
-		
-		// Step 1: Initialize system DB
+    public static void main(String[] args) {
+
+        log.info("========== MULTI-THREADED INGESTION PIPELINE ==========");
+
+        // Step 1: Initialize system DB
         AppInitializer.init();
-        
-        
-		// 1. START CONSUMERS
-		for (int i = 0; i < 5; i++) {
-			ExecutorConfig.CONSUMER_POOL.submit(new SettlementProcessor());
-		}
+        log.info("Database initialized successfully");
 
-		// 2. START PRODUCERS
-		processFile("cbs_transactions.txt", SourceType.CBS);
-		processFile("neft_transactions.txt", SourceType.NEFT);
-		processFile("upi_transactions.txt", SourceType.UPI);
-		processFile("rtgs_transactions.txt", SourceType.RTGS);
-		processSwiftFile("swift_transactions.txt", SourceType.SWIFT);
-		processFile("fintech_transactions.txt", SourceType.FINTECH);
+        // 1. START CONSUMERS
+        log.info("Starting Settlement Consumers...");
+        for (int i = 0; i < 5; i++) {
+            ExecutorConfig.CONSUMER_POOL.submit(new SettlementProcessor());
+        }
 
-		
-	
+        // 2. START PRODUCERS
+        processFile("cbs_transactions.txt", SourceType.CBS);
+        processFile("neft_transactions.txt", SourceType.NEFT);
+        processFile("upi_transactions.txt", SourceType.UPI);
+        processFile("rtgs_transactions.txt", SourceType.RTGS);
+        processSwiftFile("swift_transactions.txt", SourceType.SWIFT);
+        processFile("fintech_transactions.txt", SourceType.FINTECH);
 
+        log.info("========== INGESTION STARTED ==========");
 
-        // Step 2: Start pipeline
-		System.out.println("========== INGESTION STARTED ==========");
+        // WAIT FOR PRODUCERS
+        ExecutorConfig.PRODUCER_POOL.shutdown();
+        try {
+            ExecutorConfig.PRODUCER_POOL.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            log.error("Producer pool interrupted", e);
+            Thread.currentThread().interrupt();
+        }
 
-		// WAIT FOR PRODUCERS TO FINISH (CORRECT WAY)
-		ExecutorConfig.PRODUCER_POOL.shutdown();
-		try {
-			ExecutorConfig.PRODUCER_POOL.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+        // FINAL REPORT
+        log.info("========== PRINTING FINAL REPORT ==========");
+        transactionService.printAllTransactions();
+    }
 
-		// NOW PRINT FINAL REPORT (FROM DB)
-		transactionService.printAllTransactions();
-	}
+    // FILE PROCESSING
+    private static void processFile(String fileName, SourceType sourceType) {
 
-	// ─────────────────────────────────────────────
-	// FILE PROCESSING -> PRODUCER THREADS
-	 
-	private static void processFile(String fileName, SourceType sourceType) {
+        log.info("Processing file: {} | Source: {}", fileName, sourceType);
 
-		System.out.println("\n--- Processing " + sourceType + " ---");
+        try (BufferedReader reader = new BufferedReader(
+                new FileReader("src/resources/" + fileName))) {
 
-		try (BufferedReader reader = new BufferedReader(new FileReader("src/resources/" + fileName))) {
+            String line;
 
-			String line;
+            while ((line = reader.readLine()) != null) {
 
-			while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty())
+                    continue;
 
-				if (line.trim().isEmpty())
-					continue;
+                ExecutorConfig.PRODUCER_POOL.submit(
+                        new IngestionWorker(line.trim(), sourceType, transactionService)
+                );
+            }
 
-				// SUBMIT EACH TRANSACTION TO THREAD POOL
-				ExecutorConfig.PRODUCER_POOL.submit(new IngestionWorker(line.trim(), sourceType, transactionService));
-			}
+        } catch (Exception e) {
+            log.error("File error [{}] → {}", fileName, e.getMessage(), e);
+        }
+    }
 
-		} catch (Exception e) {
-			System.err.println(" File error [" + fileName + "] ->  " + e.getMessage());
-		}
-	}
+    // SWIFT FILE PROCESSING
+    private static void processSwiftFile(String fileName, SourceType sourceType) {
 
-	// ─────────────────────────────────────────────
-	// SWIFT MULTI-LINE HANDLING
-	// ─────────────────────────────────────────────
-	private static void processSwiftFile(String fileName, SourceType sourceType) {
+        log.info("Processing SWIFT file: {}", fileName);
 
-		System.out.println("\n--- Processing " + sourceType + " ---");
+        try (BufferedReader reader = new BufferedReader(
+                new FileReader("src/resources/" + fileName))) {
 
-		try (BufferedReader reader = new BufferedReader(new FileReader("src/resources/" + fileName))) {
+            StringBuilder block = new StringBuilder();
+            String line;
 
-			StringBuilder block = new StringBuilder();
-			String line;
+            while ((line = reader.readLine()) != null) {
 
-			while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty()) {
 
-				if (line.trim().isEmpty()) {
+                    if (block.length() > 0) {
+                        ExecutorConfig.PRODUCER_POOL.submit(
+                                new IngestionWorker(block.toString(), sourceType, transactionService)
+                        );
+                        block.setLength(0);
+                    }
 
-					if (block.length() > 0) {
+                } else {
+                    block.append(line).append("\n");
+                }
+            }
 
-						ExecutorConfig.PRODUCER_POOL
-								.submit(new IngestionWorker(block.toString(), sourceType, transactionService));
+            if (block.length() > 0) {
+                ExecutorConfig.PRODUCER_POOL.submit(
+                        new IngestionWorker(block.toString(), sourceType, transactionService)
+                );
+            }
 
-						block.setLength(0);
-					}
-
-				} else {
-					block.append(line).append("\n");
-				}
-			}
-
-			if (block.length() > 0) {
-				ExecutorConfig.PRODUCER_POOL
-						.submit(new IngestionWorker(block.toString(), sourceType, transactionService));
-			}
-
-		} catch (Exception e) {
-			System.err.println("SWIFT error → " + e.getMessage());
-		}
-	}
-
-	private static void processTransaction(String payload, SourceType sourceType) {
-
-		try {
-			IncomingTransaction txn = adapterRegistry.adapt(sourceType, payload);
-
-			// VALIDATION + SAVE
-			transactionService.save(txn);
-
-			auditList.add(txn);
-
-			System.out.println("PROCESSED: " + txn.toAuditString());
-
-		} catch (Exception e) {
-			System.err.println("[ERROR][" + sourceType + "] " + e.getMessage());
-		}
-	}
-
-	private static void printSettlementReport(List<IncomingTransaction> list) {
-
-		if (list.isEmpty()) {
-			System.out.println("\n No transactions available.");
-			return;
-		}
-
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-
-		System.out.println(
-				"\n==============================================================================================");
-		System.out.println("                           SETTLEMENT INSTRUCTIONS REPORT");
-		System.out.println(
-				"==============================================================================================");
-
-		System.out.printf("%-18s %-8s %-8s %-18s %-18s %12s %-6s %-10s %-14s %-20s\n", "Ref ID", "Channel", "Type",
-				"Sender Bank", "Receiver Bank", "Amount", "Currency", "TxnStatus", "Processing Status", "Txn Time");
-
-		System.out.println(
-				"----------------------------------------------------------------------------------------------");
-
-		int queued = 0, failed = 0, flagged = 0;
-
-		for (IncomingTransaction txn : list) {
-
-			String processingStatus = safe(txn.getProcessingStatus());
-
-			if ("QUEUED".equals(processingStatus))
-				queued++;
-			else if ("FAILED".equals(processingStatus))
-				failed++;
-			else if ("FLAGGED".equals(processingStatus))
-				flagged++;
-
-			System.out.printf("%-18s %-8s %-8s %-18s %-18s %12.2f %-6s %-10s %-14s %-20s\n", safe(txn.getSourceRef()),
-					safe(txn.getChannelCode()), safe(txn.getTxnType()), safe(txn.getSenderBankName()),
-					safe(txn.getReceiverBankName()), txn.getAmount() != null ? txn.getAmount().doubleValue() : 0.0,
-					safe(txn.getCurrency()), safe(txn.getTxnStatus()), processingStatus,
-					txn.getValueDate() != null ? txn.getValueDate().format(formatter) : "N/A");
-		}
-
-		System.out.println(
-				"----------------------------------------------------------------------------------------------");
-
-		System.out.println("TOTAL READY (QUEUED): " + queued);
-		System.out.println("TOTAL FAILED: " + failed);
-		System.out.println("TOTAL FLAGGED: " + flagged);
-
-		System.out.println(
-				"==============================================================================================");
-	}
-
-	private static String safe(Object val) {
-		return val == null ? "N/A" : val.toString();
-	}
-
+        } catch (Exception e) {
+            log.error("SWIFT processing error -> {}", e.getMessage(), e);
+        }
+    }
 }

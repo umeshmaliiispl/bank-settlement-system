@@ -14,168 +14,231 @@ import com.iispl.exception.IngestionException;
 import com.iispl.intefaces.TransactionAdapter;
 import com.iispl.validation.PayloadValidator;
 
+/**
+ * CBS Adapter — Immutable ingestion pipeline implementation.
+ *
+ * <p>
+ * Responsibilities:
+ * <ul>
+ *   <li>Parse raw CBS payload</li>
+ *   <li>Transform into canonical IncomingTransaction</li>
+ *   <li>Perform validation</li>
+ *   <li>Return immutable final transaction object</li>
+ * </ul>
+ *
+ * <p>
+ * Design Principles:
+ * <ul>
+ *   <li>Immutable object creation using Builder pattern</li>
+ *   <li>No in-place mutation (uses toBuilder for transformations)</li>
+ *   <li>Fail-fast validation and strict input checks</li>
+ * </ul>
+ */
 public class CbsAdapter implements TransactionAdapter {
 
-    private static final SourceSystem CBS_SOURCE = SourceSystem.CBS();
+    /** Constant reference for CBS source system */
+    private static final SourceSystem cbsSourceSystem = SourceSystem.CBS();
 
     @Override
     public IncomingTransaction adapt(String rawPayload) {
 
+        // ── Input Validation (Fail-Fast Guard) ───────────────────────────────
         if (rawPayload == null || rawPayload.trim().isEmpty()) {
             throw new IngestionException(
-                IngestionException.ERR_NULL_PAYLOAD,
-                SourceType.CBS,
-                rawPayload,
-                "rawPayload is null or empty"
+                    IngestionException.ERR_NULL_PAYLOAD,
+                    SourceType.CBS,
+                    rawPayload,
+                    "rawPayload is null or empty"
             );
         }
 
-        String[] f = rawPayload.split("\\|", -1);
+        // Split payload into fields (retain empty values)
+        String[] payloadFields = rawPayload.split("\\|", -1);
 
-        if (f.length < 10) {
+        if (payloadFields.length < 10) {
             throw new IngestionException(
-                IngestionException.ERR_INVALID_FORMAT,
-                SourceType.CBS,
-                rawPayload,
-                "Expected minimum 10 fields, got: " + f.length
+                    IngestionException.ERR_INVALID_FORMAT,
+                    SourceType.CBS,
+                    rawPayload,
+                    "Expected minimum 10 fields, got: " + payloadFields.length
             );
         }
 
-        IncomingTransaction txn = new IncomingTransaction();
-
-        txn.setSourceSystem(CBS_SOURCE);
-        txn.setChannelCode("CBS");
-        txn.setRawPayload(rawPayload);
-        txn.setChecksum(sha256(rawPayload));
-        txn.setCreatedBy("CBS-ADAPTER");
-
-        txn.setTxnType(TransactionType.valueOf(trim(f[0]).toUpperCase()));
-
-        txn.setSenderCustomerId(trim(f[1]));
-        txn.setSenderAccount(trim(f[2]));
-
-        txn.setReceiverCustomerId(trim(f[3]));
-        txn.setReceiverAccount(trim(f[4]));
-
-        txn.setSenderIfsc(txn.getSenderAccount());
-        txn.setReceiverIfsc(txn.getReceiverAccount());
-
-        txn.setAmount(new BigDecimal(trim(f[5])));
-        txn.setGrossAmount(txn.getAmount());
-        txn.setFeeAmount(BigDecimal.ZERO);
-
-        txn.setCurrency(trim(f[6]).toUpperCase());
-
-        LocalDateTime ts;
+        // ── Timestamp Parsing ────────────────────────────────────────────────
+        LocalDateTime transactionTimestamp;
         try {
-            ts = LocalDateTime.parse(trim(f[7]).replace(" ", "T"));
-        } catch (Exception e) {
+            transactionTimestamp = LocalDateTime.parse(
+                    safeTrim(payloadFields[7]).replace(" ", "T")
+            );
+        } catch (Exception exception) {
             throw new IngestionException(
-                IngestionException.ERR_INVALID_FORMAT,
-                SourceType.CBS,
-                rawPayload,
-                "Invalid timestamp: " + f[7]
+                    IngestionException.ERR_INVALID_FORMAT,
+                    SourceType.CBS,
+                    rawPayload,
+                    "Invalid timestamp: " + payloadFields[7]
             );
         }
 
-        txn.setValueDate(ts);
-        txn.setSourceRef(trim(f[8]));
-        txn.setTxnStatus(TransactionStatus.valueOf(trim(f[9]).toUpperCase()));
+        // ── Extract Core Transaction Data ────────────────────────────────────
+        String senderAccountNumber = safeTrim(payloadFields[2]);
+        String receiverAccountNumber = safeTrim(payloadFields[4]);
+        BigDecimal transactionAmount = new BigDecimal(safeTrim(payloadFields[5]));
 
-        txn.setSenderBankName(BankNameResolver.fromIfsc(txn.getSenderIfsc()));
-        txn.setReceiverBankName(BankNameResolver.fromIfsc(txn.getReceiverIfsc()));
+        String normalizedPayloadJson = buildNormalizedPayload(
+                safeTrim(payloadFields[8]),
+                safeTrim(payloadFields[0]),
+                transactionAmount,
+                safeTrim(payloadFields[6])
+        );
 
-        txn.setPriority(5);
-        txn.setNormalizedPayload(buildNormalized(txn));
+        // ── Build Immutable Transaction Object ───────────────────────────────
+        IncomingTransaction initialTransaction = new IncomingTransaction.Builder()
+                .sourceSystem(cbsSourceSystem)
+                .channelCode("CBS")
+                .rawPayload(rawPayload)
+                .checksum(generateSha256Checksum(rawPayload))
+                .createdBy("CBS-ADAPTER")
 
-        // VALIDATION
-        PayloadValidator.ValidationResult vr =
-                PayloadValidator.validate(txn, SourceType.CBS);
+                .txnType(TransactionType.valueOf(safeTrim(payloadFields[0]).toUpperCase()))
 
-        if (!vr.isPassed()) {
-            txn.setProcessingStatus(ProcessingStatus.FAILED);
-            txn.setErrorMessage(vr.getErrorSummary());
+                .senderCustomerId(safeTrim(payloadFields[1]))
+                .senderAccount(senderAccountNumber)
+                .senderIfsc(senderAccountNumber) // CBS uses account as IFSC reference
 
-            System.out.printf(
-            	    "[ADAPTER ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | STATUS=%-8s/%-10s%n",
-            	    Thread.currentThread().getName(),
-            	    safe(txn.getChannelCode()),
-            	    safe(txn.getSourceRef()),
-            	    formatAmount(txn.getAmount()),
-            	    safe(txn.getCurrency()),
-            	    safe(txn.getTxnStatus()),
-            	    safe(txn.getProcessingStatus())
-            	);
+                .receiverCustomerId(safeTrim(payloadFields[3]))
+                .receiverAccount(receiverAccountNumber)
+                .receiverIfsc(receiverAccountNumber)
+
+                .amount(transactionAmount)
+                .grossAmount(transactionAmount)
+                .feeAmount(BigDecimal.ZERO)
+
+                .currency(safeTrim(payloadFields[6]).toUpperCase())
+                .valueDate(transactionTimestamp)
+
+                .sourceRef(safeTrim(payloadFields[8]))
+                .txnStatus(TransactionStatus.valueOf(safeTrim(payloadFields[9]).toUpperCase()))
+
+                .senderBankName(BankNameResolver.fromIfsc(senderAccountNumber))
+                .receiverBankName(BankNameResolver.fromIfsc(receiverAccountNumber))
+
+                .priority(5)
+                .normalizedPayload(normalizedPayloadJson)
+                .build();
+
+        // ── Validation Phase (Immutable Transformation) ──────────────────────
+        PayloadValidator.ValidationResult validationResult =
+                PayloadValidator.validate(initialTransaction, SourceType.CBS);
+
+        IncomingTransaction finalTransaction;
+
+        if (!validationResult.isPassed()) {
+
+            // Validation failed → mark transaction as FAILED
+            finalTransaction = initialTransaction.toBuilder()
+                    .processingStatus(ProcessingStatus.FAILED)
+                    .errorMessage(validationResult.getErrorSummary())
+                    .build();
 
         } else {
-            txn.setProcessingStatus(ProcessingStatus.VALIDATED);
 
-            if (txn.getTxnStatus() == TransactionStatus.SUCCESS) {
-                txn.setProcessingStatus(ProcessingStatus.QUEUED);
-                CBS_SOURCE.recordSuccess();
+            // Validation passed → determine processing status
+            ProcessingStatus processingStatus = ProcessingStatus.VALIDATED;
+
+            if (initialTransaction.getTxnStatus() == TransactionStatus.SUCCESS) {
+                processingStatus = ProcessingStatus.QUEUED;
+                cbsSourceSystem.recordSuccess();
             }
+
+            finalTransaction = initialTransaction.toBuilder()
+                    .processingStatus(processingStatus)
+                    .build();
         }
 
-        System.out.printf(
-        	    "[ADAPTER ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | STATUS=%-8s/%-10s%n",
-        	    Thread.currentThread().getName(),
-        	    safe(txn.getChannelCode()),
-        	    safe(txn.getSourceRef()),
-        	    formatAmount(txn.getAmount()),
-        	    safe(txn.getCurrency()),
-        	    safe(txn.getTxnStatus()),
-        	    safe(txn.getProcessingStatus())
-        	);
+        // ── Logging ─────────────────────────────────────────────────────────
+        logTransaction(finalTransaction);
 
-        return txn;
+        return finalTransaction;
     }
-
-
-	private String safe(Object val) {
-		return val == null ? "N/A" : val.toString();
-	}
 
     @Override
     public SourceType getSourceType() {
         return SourceType.CBS;
     }
 
-    // ─────────────────────────────
-    // HELPERS
-    // ─────────────────────────────
+    // ── Helper Methods ──────────────────────────────────────────────────────
 
-    private String buildNormalized(IncomingTransaction txn) {
+    /**
+     * Builds normalized JSON payload representation.
+     */
+    private String buildNormalizedPayload(String transactionReference,
+                                          String transactionType,
+                                          BigDecimal transactionAmount,
+                                          String currencyCode) {
+
         return "{"
-                + "\"txn_id\":\"" + txn.getSourceRef() + "\","
+                + "\"txn_id\":\"" + transactionReference + "\","
                 + "\"channel\":\"CBS\","
-                + "\"txn_type\":\"" + txn.getTxnType() + "\","
-                + "\"amount\":" + txn.getAmount() + ","
-                + "\"currency\":\"" + txn.getCurrency() + "\""
+                + "\"txn_type\":\"" + transactionType + "\","
+                + "\"amount\":" + transactionAmount + ","
+                + "\"currency\":\"" + currencyCode + "\""
                 + "}";
     }
 
-    private static String trim(String s) {
-        return s == null ? "" : s.trim();
+    /**
+     * Logs transaction details in structured format.
+     */
+    private void logTransaction(IncomingTransaction transaction) {
+        System.out.printf(
+                "[ADAPTER ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | STATUS=%-8s/%-10s%n",
+                Thread.currentThread().getName(),
+                safeToString(transaction.getChannelCode()),
+                safeToString(transaction.getSourceRef()),
+                formatAmount(transaction.getAmount()),
+                safeToString(transaction.getCurrency()),
+                safeToString(transaction.getTxnStatus()),
+                safeToString(transaction.getProcessingStatus())
+        );
     }
 
-    private static String sha256(String input) {
+    /**
+     * Safely trims string (null-safe).
+     */
+    private static String safeTrim(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    /**
+     * Converts object to safe string representation.
+     */
+    private static String safeToString(Object value) {
+        return value == null ? "N/A" : value.toString();
+    }
+
+    /**
+     * Formats amount to standard currency representation.
+     */
+    private static String formatAmount(BigDecimal amount) {
+        return amount == null ? "0.00" : String.format("%,.2f", amount);
+    }
+
+    /**
+     * Generates SHA-256 checksum for payload integrity.
+     */
+    private static String generateSha256Checksum(String input) {
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(input.getBytes("UTF-8"));
+            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = messageDigest.digest(input.getBytes("UTF-8"));
 
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash)
-                sb.append(String.format("%02x", b));
+            StringBuilder hexStringBuilder = new StringBuilder();
+            for (byte hashByte : hashBytes) {
+                hexStringBuilder.append(String.format("%02x", hashByte));
+            }
 
-            return sb.toString();
+            return hexStringBuilder.toString();
 
-        } catch (Exception e) {
+        } catch (Exception exception) {
             return "CHECKSUM-ERROR";
         }
-    }
-
-    private String formatAmount(BigDecimal amt) {
-        if (amt == null) return "0.00";
-        return String.format("%,.2f", amt);
     }
 }

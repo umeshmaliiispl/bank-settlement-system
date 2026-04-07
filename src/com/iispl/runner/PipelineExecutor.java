@@ -13,18 +13,18 @@ public class PipelineExecutor {
 
     public static void run() {
 
-        TransactionDaoImpl dao = new TransactionDaoImpl();
+        TransactionDaoImpl transactionDao= new TransactionDaoImpl();
         NettingEngine nettingEngine = new NettingEngine();
         SettlementService settlementService = new SettlementService();
 
         List<IncomingTransaction> transactions =
-                dao.findSuccessfulTransactions();
+        		transactionDao.findSuccessfulTransactions();
 
         ExecutorService executor = Executors.newFixedThreadPool(5);
 
         // NETTING (Parallel)
-        for (IncomingTransaction txn : transactions) {
-            executor.submit(() -> nettingEngine.process(txn));
+        for (IncomingTransaction transaction : transactions) {
+            executor.submit(() -> nettingEngine.process(transaction));
         }
 
         executor.shutdown();

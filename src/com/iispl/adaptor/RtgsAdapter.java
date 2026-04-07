@@ -6,22 +6,42 @@ import java.time.LocalDateTime;
 
 import com.iispl.entity.IncomingTransaction;
 import com.iispl.entity.SourceSystem;
-import com.iispl.enums.*;
+import com.iispl.enums.ProcessingStatus;
+import com.iispl.enums.SourceType;
+import com.iispl.enums.TransactionStatus;
+import com.iispl.enums.TransactionType;
 import com.iispl.exception.IngestionException;
 import com.iispl.intefaces.TransactionAdapter;
 import com.iispl.validation.PayloadValidator;
 
+/**
+ * RTGS Adapter — Immutable ingestion pipeline implementation.
+ *
+ * <p>
+ * Responsibilities:
+ * <ul>
+ *   <li>Parse RTGS JSON payload</li>
+ *   <li>Apply RTGS-specific business rules (minimum amount)</li>
+ *   <li>Transform into canonical IncomingTransaction</li>
+ *   <li>Validate and return immutable result</li>
+ * </ul>
+ *
+ * <p>
+ * Business Rule:
+ * RTGS transactions must be >= ₹2,00,000.
+ */
 public class RtgsAdapter implements TransactionAdapter {
 
-    private static final SourceSystem RTGS_SOURCE = SourceSystem.RTGS();
-    private static final BigDecimal MIN_AMOUNT = new BigDecimal("200000");
+    /** Source system reference for RTGS */
+    private static final SourceSystem rtgsSourceSystem = SourceSystem.RTGS();
+
+    /** Minimum allowed RTGS transaction amount */
+    private static final BigDecimal minimumRtgsAmount = new BigDecimal("200000");
 
     @Override
     public IncomingTransaction adapt(String rawPayload) {
 
-        // ─────────────────────────────────────────
-        // 1. GUARD
-        // ─────────────────────────────────────────
+        // ── Input Validation (Fail-Fast Guard) ───────────────────────────────
         if (rawPayload == null || rawPayload.trim().isEmpty()) {
             throw new IngestionException(
                     IngestionException.ERR_NULL_PAYLOAD,
@@ -31,87 +51,59 @@ public class RtgsAdapter implements TransactionAdapter {
             );
         }
 
-        IncomingTransaction txn = new IncomingTransaction();
+        // ── Extract Core Fields from Payload ─────────────────────────────────
+        String transactionReference   = extractValue(rawPayload, "utr");
+        String senderCustomerId       = extractValue(rawPayload, "senderCid");
+        String receiverCustomerId     = extractValue(rawPayload, "receiverCid");
 
-        // ─────────────────────────────────────────
-        // 2. SOURCE INFO
-        // ─────────────────────────────────────────
-        txn.setSourceSystem(RTGS_SOURCE);
-        txn.setChannelCode("RTGS");
-        txn.setRawPayload(rawPayload);
-        txn.setChecksum(sha256(rawPayload));
-        txn.setCreatedBy("RTGS-ADAPTER");
+        String senderAccountNumber    = extractValue(rawPayload, "senderAcc");
+        String receiverAccountNumber  = extractValue(rawPayload, "receiverAcc");
 
-        // 🔥 HIGH PRIORITY
-        txn.setPriority(1);
+        String senderIfscCode         = extractValue(rawPayload, "senderIFSC");
+        String receiverIfscCode       = extractValue(rawPayload, "receiverIFSC");
 
-        // ─────────────────────────────────────────
-        // 3. CORE MAPPING
-        // ─────────────────────────────────────────
+        BigDecimal transactionAmount  =
+                new BigDecimal(extractValue(rawPayload, "amount"));
 
-        txn.setSourceRef(extract(rawPayload, "utr"));
+        String currencyCode           = extractValue(rawPayload, "currency");
 
-        txn.setSenderCustomerId(extract(rawPayload, "senderCid"));
-        txn.setReceiverCustomerId(extract(rawPayload, "receiverCid"));
+        // ── Timestamp Parsing ────────────────────────────────────────────────
+        String timestampString = extractValue(rawPayload, "txnTimestamp");
 
-        txn.setSenderAccount(extract(rawPayload, "senderAcc"));
-        txn.setReceiverAccount(extract(rawPayload, "receiverAcc"));
-
-        txn.setSenderIfsc(extract(rawPayload, "senderIFSC"));
-        txn.setReceiverIfsc(extract(rawPayload, "receiverIFSC"));
-
-        // ─────────────────────────────────────────
-        // 4. AMOUNT
-        // ─────────────────────────────────────────
-        txn.setAmount(new BigDecimal(extract(rawPayload, "amount")));
-        txn.setGrossAmount(txn.getAmount());
-        txn.setFeeAmount(BigDecimal.ZERO);
-
-        txn.setCurrency(extract(rawPayload, "currency"));
-
-        
-        String tsStr = extract(rawPayload, "txnTimestamp");
-
-        LocalDateTime ts;
+        LocalDateTime transactionTimestamp;
         try {
-            ts = LocalDateTime.parse(tsStr.replace(" ", "T"));
-        } catch (Exception e) {
+            transactionTimestamp = LocalDateTime.parse(
+                    timestampString.replace(" ", "T")
+            );
+        } catch (Exception exception) {
             throw new IngestionException(
                     IngestionException.ERR_INVALID_FORMAT,
                     SourceType.RTGS,
                     rawPayload,
-                    "Invalid txnTimestamp: " + tsStr
+                    "Invalid txnTimestamp: " + timestampString
             );
         }
 
-         txn.setValueDate(ts);
+        // ── Derived Transaction Attributes ───────────────────────────────────
+        String messageType = extractValue(rawPayload, "msgType");
 
-       
-        String msgType = extract(rawPayload, "msgType");
-
-        txn.setTxnType(
-                msgType.contains("CREDIT")
+        TransactionType transactionType =
+                messageType.contains("CREDIT")
                         ? TransactionType.CREDIT
-                        : TransactionType.DEBIT
-        );
- 
-        String status = safeExtract(rawPayload, "status");
+                        : TransactionType.DEBIT;
 
-        txn.setTxnStatus(
-                status.isEmpty()
+        String transactionStatusString =
+                safeExtractValue(rawPayload, "status");
+
+        TransactionStatus transactionStatus =
+                transactionStatusString.isEmpty()
                         ? TransactionStatus.SUCCESS
-                        : TransactionStatus.valueOf(status.toUpperCase())
-        );
+                        : TransactionStatus.valueOf(
+                                transactionStatusString.toUpperCase()
+                        );
 
-      
-        txn.setSenderBankName(
-                BankNameResolver.fromIfsc(txn.getSenderIfsc()));
-
-        txn.setReceiverBankName(
-                BankNameResolver.fromIfsc(txn.getReceiverIfsc()));
-
-        
-        if (txn.getAmount().compareTo(MIN_AMOUNT) < 0) {
+        // ── RTGS Business Rule Enforcement ───────────────────────────────────
+        if (transactionAmount.compareTo(minimumRtgsAmount) < 0) {
             throw new IngestionException(
                     IngestionException.ERR_BUSINESS_RULE,
                     SourceType.RTGS,
@@ -120,123 +112,186 @@ public class RtgsAdapter implements TransactionAdapter {
             );
         }
 
-       
-        txn.setNormalizedPayload(buildNormalized(txn));
+        // ── Normalized Payload Construction ──────────────────────────────────
+        String normalizedPayloadJson = buildNormalizedPayload(
+                transactionReference,
+                transactionType,
+                senderCustomerId,
+                senderAccountNumber,
+                receiverCustomerId,
+                receiverAccountNumber,
+                transactionAmount,
+                currencyCode,
+                transactionTimestamp,
+                transactionStatus
+        );
 
-        // ─────────────────────────────────────────
-        // 11. VALIDATION
-        // ─────────────────────────────────────────
-        PayloadValidator.ValidationResult vr =
-                PayloadValidator.validate(txn, SourceType.RTGS);
+        // ── Build Immutable Transaction Object ───────────────────────────────
+        IncomingTransaction initialTransaction = new IncomingTransaction.Builder()
+                .sourceSystem(rtgsSourceSystem)
+                .channelCode("RTGS")
+                .rawPayload(rawPayload)
+                .checksum(generateSha256Checksum(rawPayload))
+                .createdBy("RTGS-ADAPTER")
+                .priority(1)
 
-        if (!vr.isPassed()) {
-            txn.setProcessingStatus(ProcessingStatus.FAILED);
-            txn.setErrorMessage(vr.getErrorSummary());
+                .sourceRef(transactionReference)
+
+                .senderCustomerId(senderCustomerId)
+                .receiverCustomerId(receiverCustomerId)
+
+                .senderAccount(senderAccountNumber)
+                .receiverAccount(receiverAccountNumber)
+
+                .senderIfsc(senderIfscCode)
+                .receiverIfsc(receiverIfscCode)
+
+                .amount(transactionAmount)
+                .grossAmount(transactionAmount)
+                .feeAmount(BigDecimal.ZERO)
+
+                .currency(currencyCode)
+                .valueDate(transactionTimestamp)
+
+                .txnType(transactionType)
+                .txnStatus(transactionStatus)
+
+                .senderBankName(BankNameResolver.fromIfsc(senderIfscCode))
+                .receiverBankName(BankNameResolver.fromIfsc(receiverIfscCode))
+
+                .normalizedPayload(normalizedPayloadJson)
+                .build();
+
+        // ── Validation Phase ─────────────────────────────────────────────────
+        PayloadValidator.ValidationResult validationResult =
+                PayloadValidator.validate(initialTransaction, SourceType.RTGS);
+
+        IncomingTransaction finalTransaction;
+
+        if (!validationResult.isPassed()) {
+
+            finalTransaction = initialTransaction.toBuilder()
+                    .processingStatus(ProcessingStatus.FAILED)
+                    .errorMessage(validationResult.getErrorSummary())
+                    .build();
+
         } else {
-            txn.setProcessingStatus(ProcessingStatus.VALIDATED);
 
-            if (txn.getTxnStatus() == TransactionStatus.SUCCESS) {
-                txn.setProcessingStatus(ProcessingStatus.QUEUED);
-                RTGS_SOURCE.recordSuccess();
+            ProcessingStatus processingStatus = ProcessingStatus.VALIDATED;
+
+            if (initialTransaction.getTxnStatus() == TransactionStatus.SUCCESS) {
+                processingStatus = ProcessingStatus.QUEUED;
+                rtgsSourceSystem.recordSuccess();
             }
+
+            finalTransaction = initialTransaction.toBuilder()
+                    .processingStatus(processingStatus)
+                    .build();
         }
 
-        System.out.printf(
-        	    "[ADAPTER ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | STATUS=%-8s/%-10s%n",
-        	    Thread.currentThread().getName(),
-        	    safe(txn.getChannelCode()),
-        	    safe(txn.getSourceRef()),
-        	    formatAmount(txn.getAmount()),
-        	    safe(txn.getCurrency()),
-        	    safe(txn.getTxnStatus()),
-        	    safe(txn.getProcessingStatus())
-        	);
-        
-        
-        return txn;
+        // ── Logging ─────────────────────────────────────────────────────────
+        logTransaction(finalTransaction);
+
+        return finalTransaction;
     }
-    
-
-	private String formatAmount(java.math.BigDecimal amt) {
-		if (amt == null)
-			return "0.00";
-		return String.format("%,.2f", amt);
-	}
-
-	private String safe(Object val) {
-		return val == null ? "N/A" : val.toString();
-	}
 
     @Override
     public SourceType getSourceType() {
         return SourceType.RTGS;
     }
 
-    // ─────────────────────────────────────────
-    // NORMALIZED JSON
-    // ─────────────────────────────────────────
-    private String buildNormalized(IncomingTransaction txn) {
+    // ── Normalized Payload Builder ──────────────────────────────────────────
+    private String buildNormalizedPayload(
+            String transactionReference,
+            TransactionType transactionType,
+            String senderCustomerId,
+            String senderAccountNumber,
+            String receiverCustomerId,
+            String receiverAccountNumber,
+            BigDecimal transactionAmount,
+            String currencyCode,
+            LocalDateTime transactionTimestamp,
+            TransactionStatus transactionStatus) {
+
         return "{"
-                + "\"txn_id\":\"" + txn.getSourceRef() + "\","
+                + "\"txn_id\":\"" + transactionReference + "\","
                 + "\"channel\":\"RTGS\","
-                + "\"txn_type\":\"" + txn.getTxnType() + "\","
-                + "\"sender_cid\":\"" + txn.getSenderCustomerId() + "\","
-                + "\"sender_acc\":\"" + txn.getSenderAccount() + "\","
-                + "\"receiver_cid\":\"" + txn.getReceiverCustomerId() + "\","
-                + "\"receiver_acc\":\"" + txn.getReceiverAccount() + "\","
-                + "\"amount\":" + txn.getAmount() + ","
-                + "\"currency\":\"" + txn.getCurrency() + "\","
-                + "\"txn_timestamp\":\"" + txn.getValueDate() + "\","
-                + "\"status\":\"" + txn.getTxnStatus() + "\""
+                + "\"txn_type\":\"" + transactionType + "\","
+                + "\"sender_cid\":\"" + senderCustomerId + "\","
+                + "\"sender_acc\":\"" + senderAccountNumber + "\","
+                + "\"receiver_cid\":\"" + receiverCustomerId + "\","
+                + "\"receiver_acc\":\"" + receiverAccountNumber + "\","
+                + "\"amount\":" + transactionAmount + ","
+                + "\"currency\":\"" + currencyCode + "\","
+                + "\"txn_timestamp\":\"" + transactionTimestamp + "\","
+                + "\"status\":\"" + transactionStatus + "\""
                 + "}";
     }
 
-    // ─────────────────────────────────────────
-    // JSON EXTRACTOR
-    // ─────────────────────────────────────────
-    private String extract(String json, String key) {
+    // ── Payload Extractors ──────────────────────────────────────────────────
+    private String extractValue(String jsonPayload, String fieldKey) {
+        String searchKey = "\"" + fieldKey + "\"";
 
-        String k = "\"" + key + "\"";
-        int i = json.indexOf(k);
-
-        if (i == -1) {
+        int keyIndex = jsonPayload.indexOf(searchKey);
+        if (keyIndex == -1) {
             throw new IngestionException(
                     IngestionException.ERR_MISSING_FIELD,
                     SourceType.RTGS,
-                    json,
-                    "Missing field: " + key
+                    jsonPayload,
+                    "Missing field: " + fieldKey
             );
         }
 
-        int start = json.indexOf("\"", i + k.length() + 1);
-        int end = json.indexOf("\"", start + 1);
+        int valueStartIndex = jsonPayload.indexOf("\"", keyIndex + searchKey.length() + 1);
+        int valueEndIndex   = jsonPayload.indexOf("\"", valueStartIndex + 1);
 
-        return json.substring(start + 1, end);
+        return jsonPayload.substring(valueStartIndex + 1, valueEndIndex);
     }
 
-    private String safeExtract(String json, String key) {
+    private String safeExtractValue(String jsonPayload, String fieldKey) {
         try {
-            return extract(json, key);
-        } catch (Exception e) {
+            return extractValue(jsonPayload, fieldKey);
+        } catch (Exception exception) {
             return "";
         }
     }
 
-    // ─────────────────────────────────────────
-    // CHECKSUM
-    // ─────────────────────────────────────────
-    private static String sha256(String input) {
+    // ── Logging ─────────────────────────────────────────────────────────────
+    private void logTransaction(IncomingTransaction transaction) {
+        System.out.printf(
+                "[ADAPTER ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | STATUS=%-8s/%-10s%n",
+                Thread.currentThread().getName(),
+                safeToString(transaction.getChannelCode()),
+                safeToString(transaction.getSourceRef()),
+                formatAmount(transaction.getAmount()),
+                safeToString(transaction.getCurrency()),
+                safeToString(transaction.getTxnStatus()),
+                safeToString(transaction.getProcessingStatus())
+        );
+    }
+
+    // ── Helper Methods ──────────────────────────────────────────────────────
+    private static String safeToString(Object value) {
+        return value == null ? "N/A" : value.toString();
+    }
+
+    private static String formatAmount(BigDecimal amount) {
+        return amount == null ? "0.00" : String.format("%,.2f", amount);
+    }
+
+    private static String generateSha256Checksum(String input) {
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(input.getBytes("UTF-8"));
+            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = messageDigest.digest(input.getBytes("UTF-8"));
 
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash)
-                sb.append(String.format("%02x", b));
+            StringBuilder hexBuilder = new StringBuilder();
+            for (byte hashByte : hashBytes) {
+                hexBuilder.append(String.format("%02x", hashByte));
+            }
 
-            return sb.toString();
+            return hexBuilder.toString();
 
-        } catch (Exception e) {
+        } catch (Exception exception) {
             return "CHECKSUM-ERROR";
         }
     }

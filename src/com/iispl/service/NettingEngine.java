@@ -5,51 +5,66 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.iispl.entity.IncomingTransaction;
 import com.iispl.entity.NettingPosition;
 import com.iispl.enums.NetDirection;
+import com.iispl.enums.TransactionStatus;
 import com.iispl.enums.TransactionType;
 
+/**
+ * NettingEngine — Immutable pipeline design.
+ *
+ * IncomingTransaction is immutable — we only READ from it (getters).
+ * NettingPosition is the mutable accumulator (internal state, not shared
+ * externally).
+ */
 public class NettingEngine {
 
-    private final ConcurrentHashMap<String, NettingPosition> positionMap =
-            new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<String, NettingPosition> positionMap = new ConcurrentHashMap<>();
 
-    public void process(IncomingTransaction txn) {
+	/**
+	 * Processes a transaction and updates the bank netting position.
+	 * IncomingTransaction is READ-ONLY here — no mutation.
+	 */
+	public void process(IncomingTransaction txn) {
 
-        // ONLY SUCCESS
-        if (txn.getTxnStatus() != com.iispl.enums.TransactionStatus.SUCCESS)
-            return;
+		// Only process SUCCESS transactions
+		if (txn.getTxnStatus() != TransactionStatus.SUCCESS)
+			return;
 
-        String bank = txn.getSenderBankName();
+		String bank = txn.getSenderBankName();
+		if (bank == null || bank.isEmpty())
+			return;
 
-        positionMap.compute(bank, (key, pos) -> {
+		positionMap.compute(bank, (key, position) -> {
 
-            if (pos == null) {
-                pos = new NettingPosition();
-                pos.setBankName(bank);
-                pos.setCurrency(txn.getCurrency());
-            }
+			if (position == null) {
+				position = new NettingPosition();
+				position.setBankName(bank);
+				position.setCurrency(txn.getCurrency());
+			}
 
-            if (txn.getTxnType() == TransactionType.DEBIT) {
-                pos.setGrossDebitAmount(
-                    pos.getGrossDebitAmount() + txn.getAmount().doubleValue()
-                );
-            } else {
-                pos.setGrossCreditAmount(
-                    pos.getGrossCreditAmount() + txn.getAmount().doubleValue()
-                );
-            }
+			// READ from immutable txn — no setters called on txn
+			double txnAmount = txn.getAmount() != null ? txn.getAmount().doubleValue() : 0.0;
 
-            double net = pos.getGrossCreditAmount() - pos.getGrossDebitAmount();
-            pos.setNetAmount(net);
+			if (txn.getTxnType() == TransactionType.DEBIT) {
+				position.setGrossDebitAmount(position.getGrossDebitAmount() + txnAmount);
+			} else {
+				position.setGrossCreditAmount(position.getGrossCreditAmount() + txnAmount);
+			}
 
-            if (net > 0) pos.setDirection(NetDirection.NET_CREDIT);
-            else if (net < 0) pos.setDirection(NetDirection.NET_DEBIT);
-            else pos.setDirection(NetDirection.FLAT);
+			double net = position.getGrossCreditAmount() - position.getGrossDebitAmount();
+			position.setNetAmount(net);
 
-            return pos;
-        });
-    }
+			if (net > 0)
+				position.setDirection(NetDirection.NET_CREDIT);
+			else if (net < 0)
+				position.setDirection(NetDirection.NET_DEBIT);
+			else
+				position.setDirection(NetDirection.FLAT);
 
-    public ConcurrentHashMap<String, NettingPosition> getPositions() {
-        return positionMap;
-    }
+			return position;
+		});
+	}
+
+	public ConcurrentHashMap<String, NettingPosition> getPositions() {
+		return positionMap;
+	}
 }

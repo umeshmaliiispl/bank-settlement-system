@@ -52,7 +52,7 @@ public class ExchangeRate {
 		this.source = source;
 	}
 
-	// ── Business logic ────────────────────────────────────────────────────────
+	// Business logic 
 
 	/**
 	 * Convert an amount in baseCurrency → quoteCurrency using mid rate.
@@ -105,7 +105,6 @@ public class ExchangeRate {
 		return baseCurrency + "/" + quoteCurrency;
 	}
 
-	// ── Getters & Setters ─────────────────────────────────────────────────────
 
 	public Long getRateId() {
 		return rateId;
@@ -178,8 +177,6 @@ public class ExchangeRate {
 	public void setActive(boolean active) {
 		isActive = active;
 	}
-
-	// ── toString ──────────────────────────────────────────────────────────────
 
 	@Override
 	public String toString() {

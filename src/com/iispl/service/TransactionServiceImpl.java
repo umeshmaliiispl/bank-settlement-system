@@ -1,12 +1,13 @@
 package com.iispl.service;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.iispl.dao.TransactionDao;
 import com.iispl.dao.TransactionDaoImpl;
 import com.iispl.entity.IncomingTransaction;
+import com.iispl.enums.ProcessingStatus;
+import com.iispl.enums.TransactionStatus;
 
 public class TransactionServiceImpl implements TransactionService {
 
@@ -14,18 +15,42 @@ public class TransactionServiceImpl implements TransactionService {
 	private final ValidationService validationService = new ValidationService();
 
 	@Override
-	public void save(IncomingTransaction txn) {
+	public void save(IncomingTransaction incoming) {
 
-		// 1. Validate
-		validationService.validate(txn);
+		// 1. RECEIVED
+		IncomingTransaction txn = incoming.toBuilder().processingStatus(ProcessingStatus.RECEIVED).build();
 
-		// 2. F save
-		transactionDao.save(txn);
+		// 2. VALIDATION
+		txn = validationService.validate(txn);
 
-		// 3. Logging
-		System.out.printf("[DB      ][%-18s][%-7s] REF=%-22s | STATUS=%-8s/%-10s%n", Thread.currentThread().getName(),
-				safe(txn.getChannelCode()), safe(txn.getSourceRef()), safe(txn.getTxnStatus()),
-				safe(txn.getProcessingStatus()));
+		if (txn.getProcessingStatus() == ProcessingStatus.FAILED) {
+			insert(txn, "FAILED - VALIDATION");
+			return;
+		}
+
+		// 3. SAME BANK CHECK
+		if (isSameBank(txn)) {
+			txn = txn.toBuilder().processingStatus(ProcessingStatus.FAILED)
+					.errorMessage("Same bank transaction not allowed").build();
+
+			insert(txn, "FAILED - SAME BANK");
+			return;
+		}
+
+		// 4. SOURCE STATUS CHECK
+		if (txn.getTxnStatus().name().equals("FAILED")) {
+
+			txn = txn.toBuilder().processingStatus(ProcessingStatus.FAILED)
+					.errorMessage("Source transaction failed at origin").build();
+
+			insert(txn, "FAILED - SOURCE");
+			return;
+		}
+
+		// 5. SUCCESS → QUEUED
+		txn = txn.toBuilder().processingStatus(ProcessingStatus.QUEUED).build();
+
+		insert(txn, "QUEUED");
 	}
 	
 	
@@ -311,36 +336,43 @@ public class TransactionServiceImpl implements TransactionService {
 //				"\n====================================================================================================================\n");
 //	}
 
-	private String trimBankName(String name) {
-		if (name == null)
-			return "N/A";
 
-		if (name.length() > 20) {
-			return name.substring(0, 19) + ".";
-		}
-		return name;
+	// UTILS
+	private boolean isSameBank(IncomingTransaction txn) {
+		String s = txn.getSenderBankName();
+		String r = txn.getReceiverBankName();
+		return s != null && s.equalsIgnoreCase(r);
 	}
 
-	private String formatAmount(BigDecimal amt) {
-		if (amt == null)
-			return "0.00";
-		return String.format("%,.2f", amt);
+	private String buildRemark(String stage, String error) {
+		if (error == null || error.isEmpty())
+			return stage;
+		return stage + " | " + error;
+	}
+
+	private String trim(String val) {
+		if (val == null)
+			return "N/A";
+		return val.length() > 18 ? val.substring(0, 17) + "." : val;
 	}
 
 	private String formatRemark(String error) {
 		if (error == null || error.isEmpty())
 			return "-";
-
-		String clean = error.replaceAll("\\[.*?\\]", "").trim();
-
-		if (clean.contains(":")) {
+		String clean = error.replaceAll("\\[.*?]", "").trim();
+		if (clean.contains(":"))
 			clean = clean.substring(0, clean.indexOf(":"));
-		}
-
 		return clean;
 	}
 
-	private String safe(Object val) {
-		return val == null ? "N/A" : val.toString();
+	private static String formatAmount(BigDecimal amount) {
+		return amount == null ? "0.00" : String.format("%,.2f", amount);
+	}
+
+	 /* @param value any object whose string representation is needed; may be {@code null}
+	 * @return {@code value.toString()} if non-null, otherwise the placeholder {@code "N/A"}
+	 */
+	private static String safe(Object value) {
+	    return value == null ? "N/A" : value.toString();
 	}
 }
