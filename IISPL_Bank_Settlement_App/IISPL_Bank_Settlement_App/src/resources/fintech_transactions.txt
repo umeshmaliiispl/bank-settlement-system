@@ -1,0 +1,2 @@
+{"partner_ref":"RPY-001","partner_name":"Razorpay","payment_type":"CREDIT","gross_amount":"10000.00","fee_amount":"200.00","net_amount":"9800.00","currency":"INR","settlement_date":"2025-07-18","merchant_id":"M001","status":"SUCCESS"}
+{"partner_ref":"PAYTM-002","partner_name":"Paytm","payment_type":"DEBIT","gross_amount":"5000.00","fee_amount":"100.00","net_amount":"4900.00","currency":"INR","settlement_date":"2025-07-18","merchant_id":"M002","status":"SUCCESS"}
