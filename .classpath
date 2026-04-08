@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-20">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="lib/c3p0-0.10.0.jar"/>
+	<classpathentry kind="lib" path="lib/HikariCP-5.1.0.jar"/>
+	<classpathentry kind="lib" path="lib/mchange-commons-java-0.2.20.jar"/>
+	<classpathentry kind="lib" path="lib/postgresql-42.7.10.jar"/>
+	<classpathentry kind="lib" path="/home/iispl/Documents/nayembackup/lib/slf4j-simple-2.0.13.jar"/>
+	<classpathentry kind="lib" path="/home/iispl/Documents/nayembackup/lib/postgresql-42.7.10.jar"/>
+	<classpathentry kind="lib" path="/home/iispl/Documents/nayembackup/lib/mchange-commons-java-0.2.20.jar"/>
+	<classpathentry kind="lib" path="/home/iispl/Documents/nayembackup/lib/HikariCP-5.1.0.jar"/>
+	<classpathentry kind="lib" path="/home/iispl/Documents/nayembackup/lib/c3p0-0.10.0.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-api-2.0.13.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
