@@ -1,3 +1,0 @@
-{"msgType":"RTGS_CREDIT","senderIFSC":"SBIN0001224","receiverIFSC":"HDFC0005678","amount":"500000.00","currency":"INR","valueDate":"2025-07-18","utr":"SBIN225001234567", "status":"SUCCESS"}
-{"msgType":"RTGS_DEBIT","senderIFSC":"HDFC0005678","receiverIFSC":"ICIC0009999","amount":"750000.00","currency":"INR","valueDate":"2025-07-18","utr":"HDFC225001234568", status":"SUCCESS"}
-{"msgType":"RTGS_CREDIT","senderIFSC":"SBIN0001234","receiverIFSC":"HDFC0005678","amount":"500000.00","currency":"INR","valueDate":"2025-07-18","utr":"SBIN225001234567","status":"SUCCESS"}
