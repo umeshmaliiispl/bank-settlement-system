@@ -1,5 +1,0 @@
-{"msgType":"RTGS_CREDIT","senderIFSC":"ICIC0001020","receiverIFSC":"KKBK0000958","senderCid":"CID2088","receiverCid":"CID3042","senderAcc":"910020045567","receiverAcc":"556600129033","amount":"1250000.00","currency":"INR","valueDate":"2026-04-07","txnTimestamp":"2026-04-07 10:15:22","utr":"ICIC226009876543","status":"SUCCESS","remarks":"-"}
-
-{"msgType":"RTGS_DEBIT","senderIFSC":"KKBK0000958","receiverIFSC":"BARB0VJKURL","senderCid":"CID3042","receiverCid":"CID5011","senderAcc":"556600129033","receiverAcc":"002101000456","amount":"425500.00","currency":"INR","valueDate":"2026-04-07","txnTimestamp":"2026-04-07 14:45:10","utr":"KKBK226001122334","status":"SUCCESS","remarks":"-"}
-
-{"msgType":"RTGS_CREDIT","senderIFSC":"KKBK0000958","receiverIFSC":"BARB0VJKURL","senderCid":"CID3042","receiverCid":"CID5011","senderAcc":"556600129033","receiverAcc":"002101000456","amount":"25500.00","currency":"INR","valueDate":"2026-04-07","txnTimestamp":"2026-04-07 14:45:10","utr":"KKBK226001122334","status":"SUCCESS","remarks":"-"}

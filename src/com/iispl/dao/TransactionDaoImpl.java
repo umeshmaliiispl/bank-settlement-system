@@ -169,6 +169,11 @@ public class TransactionDaoImpl implements TransactionDao {
                 .receiverBankName(rs.getString("receiver_bank_name"))
                 .amount(rs.getBigDecimal("amount"))
                 .currency(rs.getString("currency"))
+                .valueDate(
+                    rs.getTimestamp("value_date") != null
+                        ? rs.getTimestamp("value_date").toLocalDateTime()
+                        : null
+                )
                 .txnStatus(
                     com.iispl.enums.TransactionStatus.valueOf(rs.getString("txn_status"))
                 )
@@ -206,4 +211,59 @@ public class TransactionDaoImpl implements TransactionDao {
             default:        return 1L;
         }
     }
+
+
+
+
+	/**
+	 * @return true if inserted, false if duplicate skipped
+	 */
+	public boolean saveIfNotDuplicate(IncomingTransaction transaction) {
+
+		try (Connection connection = DatabaseConfig.getConnection();
+				PreparedStatement ps = connection.prepareStatement(INSERT_SQL)) {
+
+			ps.setLong(1, resolveSourceSystemId(transaction.getChannelCode()));
+			ps.setString(2, transaction.getSourceRef());
+			ps.setString(3, transaction.getRawPayload());
+			ps.setString(4, transaction.getNormalizedPayload());
+
+			ps.setString(5, transaction.getTxnType().name());
+			ps.setBigDecimal(6, transaction.getAmount());
+			ps.setBigDecimal(7, transaction.getGrossAmount());
+			ps.setBigDecimal(8, transaction.getFeeAmount());
+			ps.setString(9, transaction.getCurrency());
+			ps.setObject(10, transaction.getValueDate());
+
+			ps.setString(11, transaction.getTxnStatus().name());
+			ps.setString(12, transaction.getProcessingStatus().name());
+
+			ps.setString(13, transaction.getSenderIfsc());
+			ps.setString(14, transaction.getReceiverIfsc());
+
+			ps.setString(15, transaction.getSenderBankName());
+			ps.setString(16, transaction.getReceiverBankName());
+
+			ps.setString(17, transaction.getSenderBic());
+			ps.setString(18, transaction.getReceiverBic());
+
+			ps.setString(19, transaction.getPartnerName());
+			ps.setString(20, transaction.getMerchantId());
+
+			ps.setString(21, transaction.getChannelCode());
+			ps.setString(22, transaction.getChecksum());
+			ps.setString(23, transaction.getErrorMessage());
+
+			int rowsInserted = ps.executeUpdate();
+
+			return rowsInserted > 0;
+
+		} catch (Exception exception) {
+
+			throw new DatabaseInsertException("Database insert failed for reference: " + transaction.getSourceRef(),
+					exception, transaction);
+		}
+	}
+
+
 }

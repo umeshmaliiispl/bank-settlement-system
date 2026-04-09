@@ -47,10 +47,10 @@ public class NettingEngine {
 			if (txn.getTxnType() == TransactionType.DEBIT) {
 				position.setGrossDebitAmount(position.getGrossDebitAmount() + txnAmount);
 			} else {
-				position.setGrossCreditAmount(position.getGrossCreditAmount() + txnAmount);
+				position.setGrossCreditAmount(position.getNetAmount() + txnAmount);
 			}
 
-			double net = position.getGrossCreditAmount() - position.getGrossDebitAmount();
+			double net = position.getNetAmount() - position.getGrossDebitAmount();
 			position.setNetAmount(net);
 
 			if (net > 0)
