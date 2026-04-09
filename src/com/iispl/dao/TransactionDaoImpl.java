@@ -155,6 +155,128 @@ public class TransactionDaoImpl implements TransactionDao {
 
         return list;
     }
+    
+    
+    @Override
+    public void printBankWiseSettlement(String batchId) {
+
+        String sql = """
+            SELECT 
+                bank_name,
+                SUM(credit) AS total_credit,
+                SUM(debit) AS total_debit,
+                SUM(credit - debit) AS net_amount
+            FROM (
+                -- CREDIT SIDE (Receiver gets money)
+                SELECT 
+                    it.receiver_bank_name AS bank_name,
+                    it.amount AS credit,
+                    0 AS debit
+                FROM settlement_record sr
+                JOIN incoming_transaction it 
+                    ON sr.incoming_txn_id = it.id
+                WHERE sr.batch_id = ?
+
+                UNION ALL
+
+                -- DEBIT SIDE (Sender gives money)
+                SELECT 
+                    it.sender_bank_name AS bank_name,
+                    0 AS credit,
+                    it.amount AS debit
+                FROM settlement_record sr
+                JOIN incoming_transaction it 
+                    ON sr.incoming_txn_id = it.id
+                WHERE sr.batch_id = ?
+            ) t
+            GROUP BY bank_name
+            ORDER BY bank_name
+        """;
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, batchId);
+            ps.setString(2, batchId);
+
+            ResultSet rs = ps.executeQuery();
+
+            double totalCredit = 0;
+            double totalDebit = 0;
+
+            System.out.println("\n=========================================================");
+            System.out.println("            BANK SETTLEMENT SUMMARY REPORT");
+            System.out.println("=========================================================");
+            System.out.println("Settlement Date : " + java.time.LocalDate.now());
+            System.out.println("Batch ID        : " + batchId);
+
+            System.out.println("\n---------------------------------------------------------");
+            System.out.printf(
+                    "| %-15s | %-13s | %-13s | %-12s |\n",
+                    "Bank Name", "Total Credit", "Total Debit", "Net Amt"
+            );
+            System.out.println("---------------------------------------------------------");
+
+            while (rs.next()) {
+
+                String bank = rs.getString("bank_name");
+                double credit = rs.getDouble("total_credit");
+                double debit = rs.getDouble("total_debit");
+                double net = rs.getDouble("net_amount");
+
+                totalCredit += credit;
+                totalDebit += debit;
+
+                String netFormatted = net >= 0
+                        ? "+" + formatAmount(net)
+                        : formatAmount(net);
+
+                System.out.printf(
+                        "| %-15s | %-13s | %-13s | %-12s |\n",
+                        safe(bank),
+                        formatAmount(credit),
+                        formatAmount(debit),
+                        netFormatted
+                );
+            }
+
+            System.out.println("---------------------------------------------------------");
+
+            double finalNet = totalCredit - totalDebit;
+
+            System.out.println("\nNet Settlement Summary:");
+            System.out.println("---------------------------------------------------------");
+            System.out.println("Total Credits  : " + formatAmount(totalCredit));
+            System.out.println("Total Debits   : " + formatAmount(totalDebit));
+            System.out.println("Settlement Net : " + formatAmount(finalNet)
+                    + (finalNet == 0 ? " (Balanced)" : ""));
+            System.out.println("---------------------------------------------------------");
+
+            System.out.println("\nSettlement Instructions:");
+            System.out.println("---------------------------------------------------------");
+            System.out.println("✔ Banks with Positive Net → Receive funds from RBI");
+            System.out.println("✔ Banks with Negative Net → Pay funds to RBI");
+
+            System.out.println("\n---------------------------------------------------------");
+            System.out.println("Status       : " + (finalNet == 0 ? "SUCCESS" : "MISMATCH"));
+            System.out.println("Processed At : " + java.time.LocalDateTime.now());
+            System.out.println("=========================================================\n");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private String formatAmount(double amount) {
+        return String.format("%,.2f", amount);
+    }
+
+    private String safe(String val) {
+        return val == null ? "N/A" : val;
+    }
+    
+    
+    
 
     // Row Mapper builds NEW immutable object from DB 
 
@@ -215,6 +337,7 @@ public class TransactionDaoImpl implements TransactionDao {
 
 
 
+
 	/**
 	 * @return true if inserted, false if duplicate skipped
 	 */
@@ -266,4 +389,58 @@ public class TransactionDaoImpl implements TransactionDao {
 	}
 
 
+    @Override
+    public List<IncomingTransaction> getUnsettledTranasactions() {
+
+        List<IncomingTransaction> list = new ArrayList<>();
+
+        String sql = "SELECT it.* " +
+                     "FROM incoming_transaction it " +
+                     "LEFT JOIN settlement_record sr " +
+                     "ON it.id = sr.incoming_txn_id " +
+                     "WHERE sr.incoming_txn_id IS NULL " +
+                     "AND it.txn_status = 'SUCCESS' " +
+                     "AND it.processing_status = 'QUEUED'";
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+
+                IncomingTransaction txn = new IncomingTransaction.Builder()
+                        .incomingTxnId(rs.getLong("id"))
+                        .sourceRef(rs.getString("source_ref"))
+                        .channelCode(rs.getString("channel_code"))
+                        .senderBankName(rs.getString("sender_bank_name"))
+                        .receiverBankName(rs.getString("receiver_bank_name"))
+                        .amount(rs.getBigDecimal("amount"))
+                        .currency(rs.getString("currency"))
+                        .txnStatus(
+                            com.iispl.enums.TransactionStatus.valueOf(rs.getString("txn_status"))
+                        )
+                        .processingStatus(
+                            com.iispl.enums.ProcessingStatus.valueOf(rs.getString("processing_status"))
+                        )
+                        .txnType(
+                            com.iispl.enums.TransactionType.valueOf(rs.getString("txn_type"))
+                        )
+                        .valueDate(
+                            rs.getTimestamp("value_date") != null
+                                ? rs.getTimestamp("value_date").toLocalDateTime()
+                                : null
+                        )
+                        .build();
+
+                list.add(txn);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+    
 }
+

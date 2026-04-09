@@ -13,6 +13,8 @@ public interface TransactionDao {
      */
     boolean save(IncomingTransaction txn);
 
+    
+    public void printBankWiseSettlement(String batchId);
     /**
      * Fetch all transactions
      */
@@ -23,4 +25,6 @@ public interface TransactionDao {
      * (SUCCESS + QUEUED)
      */
     List<IncomingTransaction> findSuccessfulTransactions();
+    
+    public List<IncomingTransaction> getUnsettledTranasactions();
 }

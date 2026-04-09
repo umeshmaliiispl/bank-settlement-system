@@ -2,6 +2,8 @@ package com.iispl.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.iispl.enums.SettlementStatus;
 
@@ -13,6 +15,7 @@ public class SettlementRecord extends BaseEntity {
 	private LocalDateTime settledDate;
 	private SettlementStatus settledStatus;
 	private String failureReason;
+	private List<IncomingTransaction> settlementBatchRecordTransactions = new ArrayList<>();
 
 	public SettlementRecord() {
 		this.settledDate = LocalDateTime.now();
@@ -74,6 +77,14 @@ public class SettlementRecord extends BaseEntity {
 
 	public void setFailureReason(String failureReason) {
 		this.failureReason = failureReason;
+	}
+
+	public List<IncomingTransaction> getSettlementBatchRecordTransactions() {
+		return settlementBatchRecordTransactions;
+	}
+
+	public void setSettlementBatchRecordTransactions(List<IncomingTransaction> settlementBatchRecordTransactions) {
+		this.settlementBatchRecordTransactions = settlementBatchRecordTransactions;
 	}
 
 	public void markFailed(String reason) {

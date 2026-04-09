@@ -7,38 +7,40 @@ import com.iispl.utility.QueueManager;
 
 public class SettlementProcessor implements Runnable {
 
-    @Override
-    public void run() {
+	@Override
+	public void run() {
 
-        while (true) {
-            try {
-                IncomingTransaction txn = QueueManager.QUEUE.take();
+	    while (!Thread.currentThread().isInterrupted()) {
+	        try {
+	            IncomingTransaction txn = QueueManager.QUEUE.poll(5, java.util.concurrent.TimeUnit.SECONDS);
 
-                if (txn == null) continue;
+	            if (txn == null) {
+	                System.out.println("No more transactions → Consumer exiting...");
+	                break; // ✅ EXIT THREAD
+	            }
 
-                //  ONLY VALID TRANSACTIONS GO TO SETTLEMENT
-                if (txn.getTxnStatus() == TransactionStatus.SUCCESS &&
-                    txn.getProcessingStatus() == ProcessingStatus.QUEUED) {
+	            if (txn.getTxnStatus() == TransactionStatus.SUCCESS &&
+	                txn.getProcessingStatus() == ProcessingStatus.QUEUED) {
 
-                    processSettlement(txn);
+	                processSettlement(txn);
 
-                } else {
-                    //  SKIPPED TRANSACTIONS (IMPORTANT FOR DEBUG)
-                    System.out.printf(
-                        "[SKIPPED ][%s] REF=%s | TXN=%s | PROC=%s | REASON=Not eligible for settlement%n",
-                        txn.getChannelCode(),
-                        txn.getSourceRef(),
-                        txn.getTxnStatus(),
-                        txn.getProcessingStatus()
-                    );
-                }
+	            } else {
+	                System.out.printf(
+	                    "[SKIPPED ][%s] REF=%s | TXN=%s | PROC=%s%n",
+	                    txn.getChannelCode(),
+	                    txn.getSourceRef(),
+	                    txn.getTxnStatus(),
+	                    txn.getProcessingStatus()
+	                );
+	            }
 
-            } catch (Exception e) {
-                System.err.println("[SETTLEMENT ERROR] " + e.getMessage());
-            }
-        }
-    }
-
+	        } catch (InterruptedException e) {
+	            System.out.println("Consumer interrupted → exiting...");
+	            break;
+	        }
+	    }
+	}	
+	
     private void processSettlement(IncomingTransaction txn) {
 
         //  FINAL SAFETY CHECK (DEFENSIVE PROGRAMMING)

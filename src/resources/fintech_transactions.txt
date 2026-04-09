@@ -1,3 +1,9 @@
 {"txn_id":"FPY-006","channel":"FINTECH","txn_type":"CREDIT","sender_cid":"CID1003","sender_acc_no":"AXIS0001122","receiver_cid":"CID3001","receiver_acc_no":"IISPL_ACC","amount":"12000.00","currency":"INR","txn_timestamp":"2026-03-25 14:10:00","status":"SUCCESS","remarks":"PhonePe Fee:240"}
 
 {"txn_id":"GPAY-007","channel":"FINTECH","txn_type":"DEBIT","sender_cid":"CID1004","sender_acc_no":"HDFC0005678","receiver_cid":"CID3001","receiver_acc_no":"IISPL_ACC","amount":"7000.00","currency":"INR","txn_timestamp":"2026-03-25 15:25:30","status":"SUCCESS","remarks":"GooglePay Fee:140"}
+
+{"txn_id":"PAYTM-008","channel":"FINTECH","txn_type":"CREDIT","sender_cid":"CID1005","sender_acc_no":"AXIS0001122","receiver_cid":"CID3001","receiver_acc_no":"IISPL_ACC","amount":"18500.00","currency":"INR","txn_timestamp":"2026-03-25 16:05:45","status":"SUCCESS","remarks":"Paytm Fee:370"}
+
+{"txn_id":"AMZPAY-009","channel":"FINTECH","txn_type":"DEBIT","sender_cid":"CID1006","sender_acc_no":"HDFC0005678","receiver_cid":"CID3002","receiver_acc_no":"IISPL_ACC1","amount":"9200.00","currency":"INR","txn_timestamp":"2026-03-25 17:40:10","status":"SUCCESS","remarks":"AmazonPay Fee:184"}
+
+{"txn_id":"GPAY-044","channel":"FINTECH","txn_type":"CREDIT","sender_cid":"CID1004","sender_acc_no":"HDFC0005678","receiver_cid":"CID1008","receiver_acc_no":"AXIS00011232","amount":"7000.00","currency":"INR","txn_timestamp":"2026-04-04 15:25:30","status":"SUCCESS","remarks":"GooglePay Fee:10"}

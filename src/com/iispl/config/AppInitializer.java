@@ -7,7 +7,6 @@ public class AppInitializer {
 
     public static void init() {
         System.out.println("========== INITIALIZING DATABASE ==========");
-
         try {
             // Trigger DB connection 
             TransactionDao transactionDao = new TransactionDaoImpl();

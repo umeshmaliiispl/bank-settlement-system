@@ -17,10 +17,12 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public void save(IncomingTransaction incoming) {
 
+        // 1. RECEIVED
         IncomingTransaction txn = incoming.toBuilder()
                 .processingStatus(ProcessingStatus.RECEIVED)
                 .build();
 
+        // 2. VALIDATION
         txn = validationService.validate(txn);
 
         if (txn.getProcessingStatus() == ProcessingStatus.FAILED) {
@@ -28,6 +30,7 @@ public class TransactionServiceImpl implements TransactionService {
             return;
         }
 
+        // 3. SAME BANK CHECK
         if (isSameBank(txn)) {
             txn = txn.toBuilder()
                     .processingStatus(ProcessingStatus.FAILED)
@@ -38,6 +41,7 @@ public class TransactionServiceImpl implements TransactionService {
             return;
         }
 
+        // 4. SOURCE STATUS CHECK
         if (txn.getTxnStatus() == TransactionStatus.FAILED) {
             txn = txn.toBuilder()
                     .processingStatus(ProcessingStatus.FAILED)
@@ -48,11 +52,17 @@ public class TransactionServiceImpl implements TransactionService {
             return;
         }
 
+        // 5. SUCCESS → QUEUED
         txn = txn.toBuilder()
                 .processingStatus(ProcessingStatus.QUEUED)
                 .build();
 
         insert(txn, "QUEUED");
+    }
+
+    @Override
+    public List<IncomingTransaction> getAllTransactions() {
+        return transactionDao.findAll();
     }
 
     @Override
@@ -69,15 +79,17 @@ public class TransactionServiceImpl implements TransactionService {
         System.out.println("                                      INCOMING TRANSACTIONS - FULL REPORT");
         System.out.println("========================================================================================================================================================");
 
-        System.out.printf("%-4s %-20s %-8s %-8s %-20s %-20s %-12s %-6s %-12s %-14s %-40s%n",
-                "ID", "REF ID", "CHNL", "TYPE", "SENDER BANK", "RECEIVER BANK",
-                "AMOUNT", "CUR", "TXN STATUS", "PROC STATUS", "REMARK");
+        System.out.printf(
+                "%-4s %-20s %-8s %-8s %-20s %-20s %-12s %-6s %-12s %-14s %-40s%n",
+                "ID", "REF ID", "CHNL", "TYPE",
+                "SENDER BANK", "RECEIVER BANK",
+                "AMOUNT", "CUR",
+                "TXN STATUS", "PROC STATUS", "REMARK"
+        );
 
         System.out.println("--------------------------------------------------------------------------------------------------------------------------------------------------------");
 
-        int queued = 0;
-        int failed = 0;
-        int flagged = 0;
+        int queued = 0, failed = 0, flagged = 0;
 
         for (IncomingTransaction txn : list) {
 
@@ -87,7 +99,8 @@ public class TransactionServiceImpl implements TransactionService {
             else if ("FAILED".equals(proc)) failed++;
             else if ("FLAGGED".equals(proc)) flagged++;
 
-            System.out.printf("%-4d %-20s %-8s %-8s %-20s %-20s %-12s %-6s %-12s %-14s %-40s%n",
+            System.out.printf(
+                    "%-4d %-20s %-8s %-8s %-20s %-20s %-12s %-6s %-12s %-14s %-40s%n",
                     txn.getIncomingTxnId(),
                     safe(txn.getSourceRef()),
                     safe(txn.getChannelCode()),
@@ -98,7 +111,8 @@ public class TransactionServiceImpl implements TransactionService {
                     safe(txn.getCurrency()),
                     safe(txn.getTxnStatus()),
                     proc,
-                    formatRemark(txn.getErrorMessage()));
+                    formatRemark(txn.getErrorMessage())
+            );
         }
 
         System.out.println("--------------------------------------------------------------------------------------------------------------------------------------------------------");
@@ -113,10 +127,7 @@ public class TransactionServiceImpl implements TransactionService {
         System.out.println("========================================================================================================================================================\n");
     }
 
-    @Override
-    public List<IncomingTransaction> getAllTransactions() {
-        return transactionDao.findAll();
-    }
+    // ================= HELPER METHODS =================
 
     private void insert(IncomingTransaction txn, String stage) {
 
@@ -134,7 +145,8 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     private void log(IncomingTransaction txn, String stage) {
-        System.out.printf("[SERVICE ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | TXN=%-8s | PROC=%-10s | REMARK: %s%n",
+        System.out.printf(
+                "[SERVICE ][%-18s][%-7s] REF=%-22s | AMT=%12s %-3s | TXN=%-8s | PROC=%-10s | REMARK: %s%n",
                 Thread.currentThread().getName(),
                 safe(txn.getChannelCode()),
                 safe(txn.getSourceRef()),
@@ -142,7 +154,8 @@ public class TransactionServiceImpl implements TransactionService {
                 safe(txn.getCurrency()),
                 safe(txn.getTxnStatus()),
                 safe(txn.getProcessingStatus()),
-                buildRemark(stage, txn.getErrorMessage()));
+                buildRemark(stage, txn.getErrorMessage())
+        );
     }
 
     private boolean isSameBank(IncomingTransaction txn) {

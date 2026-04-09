@@ -1,0 +1,12 @@
+<SettlementBatch>
+  <BatchId>B-20260409-1775709577745</BatchId>
+  <BatchDate>2026-04-09</BatchDate>
+  <Transactions>
+    <Transaction>
+      <Ref>NEFT-20260326-00124</Ref>
+      <Amount>15000.0000</Amount>
+      <Channel>NEFT</Channel>
+      <Status>SUCCESS</Status>
+    </Transaction>
+  </Transactions>
+</SettlementBatch>
