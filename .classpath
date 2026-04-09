@@ -8,13 +8,11 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="lib" path="lib/c3p0-0.10.0.jar"/>
 	<classpathentry kind="lib" path="lib/HikariCP-5.1.0.jar"/>
+	<classpathentry kind="lib" path="lib/logback-classic-1.5.30.jar"/>
+	<classpathentry kind="lib" path="lib/logback-core-1.5.30.jar"/>
 	<classpathentry kind="lib" path="lib/mchange-commons-java-0.2.20.jar"/>
 	<classpathentry kind="lib" path="lib/postgresql-42.7.10.jar"/>
-	<classpathentry kind="lib" path="/home/iispl/Documents/nayembackup/lib/slf4j-simple-2.0.13.jar"/>
-	<classpathentry kind="lib" path="/home/iispl/Documents/nayembackup/lib/postgresql-42.7.10.jar"/>
-	<classpathentry kind="lib" path="/home/iispl/Documents/nayembackup/lib/mchange-commons-java-0.2.20.jar"/>
-	<classpathentry kind="lib" path="/home/iispl/Documents/nayembackup/lib/HikariCP-5.1.0.jar"/>
-	<classpathentry kind="lib" path="/home/iispl/Documents/nayembackup/lib/c3p0-0.10.0.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-2.0.13.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-simple-2.0.13.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

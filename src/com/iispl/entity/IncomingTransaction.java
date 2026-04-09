@@ -1,189 +1,90 @@
 package com.iispl.entity;
 
-import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-
 import com.iispl.enums.ProcessingStatus;
 import com.iispl.enums.TransactionStatus;
 import com.iispl.enums.TransactionType;
 
-public final class IncomingTransaction extends BaseEntity {
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Objects;
 
-	private Long incomingTxnId;
+/**
+ * Immutable IncomingTransaction — Fintech Grade Design
+ *
+ * Rules: - final class → cannot be subclassed - all fields final -> set once via
+ * constructor - no setters → use toBuilder() to create a transformed copy
+ */
+public final class IncomingTransaction {
 
-	// SOURCE
-	private SourceSystem sourceSystem;
-	private String sourceRef;
-	private String rawPayload;
-	private String normalizedPayload;
-	private String checksum;
+	private final Long incomingTxnId;
+	private final String sourceRef;
+	private final String channelCode;
+	private final SourceSystem sourceSystem;
+	private final String createdBy;
 
-	private String senderAccount;
-	private String receiverAccount;
-	private String senderCustomerId;
-	private String receiverCustomerId;
+	private final TransactionType txnType;
+	private final TransactionStatus txnStatus;
+	private final ProcessingStatus processingStatus;
 
-	// CORE
-	private TransactionType txnType;
-	private BigDecimal amount;
-	private BigDecimal grossAmount;
-	private BigDecimal feeAmount;
-	private String currency;
-	private LocalDateTime valueDate;
+	private final BigDecimal amount;
+	private final BigDecimal grossAmount;
+	private final BigDecimal feeAmount;
+	private final String currency;
 
-	// 🔥 NEW (SOURCE STATUS)
-	private TransactionStatus txnStatus;
+	private final String senderCustomerId;
+	private final String senderAccount;
+	private final String senderIfsc;
+	private final String senderBic;
+	private final String senderBankName;
 
-	// PIPELINE
-	private ProcessingStatus processingStatus;
-	private LocalDateTime ingestTimestamp;
+	private final String receiverCustomerId;
+	private final String receiverAccount;
+	private final String receiverIfsc;
+	private final String receiverBic;
+	private final String receiverBankName;
 
-	// DETAILS
-	private String senderIfsc;
-	private String receiverIfsc;
-	private String senderBankName;
-	private String receiverBankName;
-	private String channelCode;
-	private String senderBic;
-	private String receiverBic;
-	
-	
-	private Long sourceSystemId;
-	public Long getSourceSystemId() {
-		return sourceSystemId;
-	}
+	private final LocalDateTime valueDate;
 
-	public void setSourceSystemId(Long sourceSystemId) {
-		this.sourceSystemId = sourceSystemId;
-	}
+	private final String rawPayload;
+	private final String normalizedPayload;
+	private final String checksum;
 
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
-	}
+	private final int priority;
+	private final String partnerName;
+	private final String merchantId;
+	private final String errorMessage;
 
-	public void setCreatedAt(LocalDateTime createdAt) {
-		this.createdAt = createdAt;
-	}
-
-	public LocalDateTime getUpdatedAt() {
-		return updatedAt;
-	}
-
-	public void setUpdatedAt(LocalDateTime updatedAt) {
-		this.updatedAt = updatedAt;
-	}
-
-	public String getCreatedBy() {
-		return createdBy;
-	}
-
-	public void setCreatedBy(String createdBy) {
-		this.createdBy = createdBy;
-	}
-
-	public int getVersion() {
-		return version;
-	}
-
-	public void setVersion(int version) {
-		this.version = version;
-	}
-
-	private LocalDateTime createdAt;
-	private LocalDateTime updatedAt;
-	private String createdBy;
-	private int version;
-
-	// PIPELINE CONTROL
-	private int priority;
-	private int retryCount;
-	private String errorMessage;
-
-	// FINTECH SPECIFIC
-	private String partnerName;
-	private String merchantId;
-
-	public IncomingTransaction() {
-		this.processingStatus = ProcessingStatus.RECEIVED;
-		this.ingestTimestamp = LocalDateTime.now();
-		this.priority = 5;
-		this.retryCount = 0;
-		this.grossAmount = BigDecimal.ZERO;
-		this.feeAmount = BigDecimal.ZERO;
-	}
-
-	// ONLY SUCCESS GOES TO SETTLEMENT
-	public boolean isQueueable() {
-		return TransactionStatus.SUCCESS.equals(txnStatus) && (ProcessingStatus.VALIDATED.equals(processingStatus)
-				|| ProcessingStatus.QUEUED.equals(processingStatus));
-	}
-
-	public String toAuditString() {
-		return String.format("[%s] REF=%-18s | AMT=%10s %-3s | STATUS=%s/%s", safe(channelCode), safe(sourceRef),
-				formatAmount(amount), safe(currency), safe(txnStatus), safe(processingStatus));
-	}
-
-	private String formatAmount(java.math.BigDecimal amt) {
-		if (amt == null)
-			return "0.00";
-		return String.format("%,.2f", amt);
-	}
-
-	private String safe(Object val) {
-		return val == null ? "N/A" : val.toString();
-	}
-
-	public TransactionStatus getTxnStatus() {
-		return txnStatus;
-	}
-
-	public void setTxnStatus(TransactionStatus txnStatus) {
-		this.txnStatus = txnStatus;
-	}
-
-	public void setChecksum(String v) {
-		this.checksum = v;
-	}
-
-	public String getChecksum() {
-		return checksum;
-	}
-
-	public void setGrossAmount(BigDecimal v) {
-		this.grossAmount = v;
-	}
-
-	public BigDecimal getGrossAmount() {
-		return grossAmount;
-	}
-
-	public void setFeeAmount(BigDecimal v) {
-		this.feeAmount = v;
-	}
-
-	public BigDecimal getFeeAmount() {
-		return feeAmount;
-	}
-
-	public void setSenderIfsc(String v) {
-		this.senderIfsc = v;
-	}
-
-	public String getSenderIfsc() {
-		return senderIfsc;
-	}
-
-	public void setReceiverIfsc(String v) {
-		this.receiverIfsc = v;
-	}
-
-	public String getReceiverIfsc() {
-		return receiverIfsc;
-	}
-
-	public void setPriority(int v) {
-		this.priority = v;
+	private IncomingTransaction(Builder builder) {
+		this.incomingTxnId = builder.incomingTxnId;
+		this.sourceRef = builder.sourceRef;
+		this.channelCode = builder.channelCode;
+		this.sourceSystem = builder.sourceSystem;
+		this.createdBy = builder.createdBy;
+		this.txnType = builder.txnType;
+		this.txnStatus = builder.txnStatus;
+		this.processingStatus = builder.processingStatus;
+		this.amount = builder.amount;
+		this.grossAmount = builder.grossAmount;
+		this.feeAmount = builder.feeAmount;
+		this.currency = builder.currency;
+		this.senderCustomerId = builder.senderCustomerId;
+		this.senderAccount = builder.senderAccount;
+		this.senderIfsc = builder.senderIfsc;
+		this.senderBic = builder.senderBic;
+		this.senderBankName = builder.senderBankName;
+		this.receiverCustomerId = builder.receiverCustomerId;
+		this.receiverAccount = builder.receiverAccount;
+		this.receiverIfsc = builder.receiverIfsc;
+		this.receiverBic = builder.receiverBic;
+		this.receiverBankName = builder.receiverBankName;
+		this.valueDate = builder.valueDate;
+		this.rawPayload = builder.rawPayload;
+		this.normalizedPayload = builder.normalizedPayload;
+		this.checksum = builder.checksum;
+		this.priority = builder.priority;
+		this.partnerName = builder.partnerName;
+		this.merchantId = builder.merchantId;
+		this.errorMessage = builder.errorMessage;
 	}
 
 
