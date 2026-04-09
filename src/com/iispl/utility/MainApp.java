@@ -1,3 +1,5 @@
+
+
 package com.iispl.utility;
 
 import java.io.BufferedReader;
@@ -12,7 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import com.iispl.adaptor.AdapterRegistry;
 import com.iispl.config.AppInitializer;
+import com.iispl.config.DatabaseConfig;
 import com.iispl.config.ExecutorConfig;
+import com.iispl.entity.Customer;
 import com.iispl.entity.IncomingTransaction;
 import com.iispl.entity.SettlementBatch;
 import com.iispl.enums.SourceType;
@@ -21,6 +25,7 @@ import com.iispl.runner.SettlementProcessor;
 import com.iispl.service.SettlementService;
 import com.iispl.service.TransactionService;
 import com.iispl.service.TransactionServiceImpl;
+import com.iispl.service.CustomerServiceImpl;
 
 // ✅ ONLY THESE IMPORTS ADDED
 import com.iispl.dao.NettingPositionDAOImpl;
@@ -33,10 +38,17 @@ public class MainApp {
 
     private static final Logger log = LoggerFactory.getLogger(MainApp.class);
 
-    private static final TransactionService transactionService = new TransactionServiceImpl();
-    private static final AdapterRegistry adapterRegistry = AdapterRegistry.getInstance();
-    private static final List<IncomingTransaction> auditList = new ArrayList<>();
+    // =========================================================
+    //  Service Instances
+    // =========================================================
+    private static final TransactionService transactionService  = new TransactionServiceImpl();
+    private static final CustomerService    customerService     = new CustomerServiceImpl();
+    private static final AdapterRegistry    adapterRegistry     = AdapterRegistry.getInstance();
+    private static final List<IncomingTransaction> auditList    = new ArrayList<>();
 
+    // =========================================================
+    //  MAIN
+    // =========================================================
     public static void main(String[] args) {
     	
     	
@@ -44,25 +56,112 @@ public class MainApp {
     	Scanner scanner=new Scanner(System.in);
         log.info("========== MULTI-THREADED INGESTION PIPELINE ==========");
 
-        // Step 1: Initialize system DB
+        // ✅ Step 1: Initialize system DB
         AppInitializer.init();
         log.info("Database initialized successfully");
 
-        // 1. START CONSUMERS
-        log.info("Starting Settlement Consumers...");
-        for (int i = 0; i < 5; i++) {
-            ExecutorConfig.CONSUMER_POOL.submit(new SettlementProcessor());
-        }
+        try {
 
-        // 2. START PRODUCERS
-        processFile("cbs_transactions.txt", SourceType.CBS);
-        processFile("neft_transactions.txt", SourceType.NEFT);
-        processFile("upi_transactions.txt", SourceType.UPI);
-        processFile("rtgs_transactions.txt", SourceType.RTGS);
-        processSwiftFile("swift_transactions.txt", SourceType.SWIFT);
-        processFile("fintech_transactions.txt", SourceType.FINTECH);
+            // =========================================================
+            // ✅ CUSTOMER OPERATIONS
+            // =========================================================
+            log.info("\n");
+            log.info("╔══════════════════════════════════════════╗");
+            log.info("║       CUSTOMER SERVICE OPERATIONS        ║");
+            log.info("╚══════════════════════════════════════════╝");
 
-        log.info("========== INGESTION STARTED ==========");
+            // ----------------------------------------------------------
+            // 1️⃣  REGISTER NEW CUSTOMER
+            // ----------------------------------------------------------
+            log.info("---------- 1. REGISTER CUSTOMER ----------");
+
+            Customer newCustomer = new Customer(
+                "SYSTEM",       // createdBy
+                "CID9999",      // customerId
+                "Test User",    // fullName
+                "PENDING",      // kycStatus
+                "ACTIVE"        // customerStatus
+            );
+
+//            boolean isRegistered = customerService.registerCustomer(newCustomer);
+//            if (isRegistered) {
+//                log.info("✅ Customer Registered → CID: {} | Name: {}",
+//                    newCustomer.getCustomerId(),
+//                    newCustomer.getFullName());
+//            } else {
+//                log.warn("⚠️  Customer Registration Failed → CID: {}",
+//                    newCustomer.getCustomerId());
+//            }
+
+            // ----------------------------------------------------------
+            // 2️⃣  GET ALL CUSTOMERS
+            // ----------------------------------------------------------
+            log.info("---------- 2. GET ALL CUSTOMERS ----------");
+
+            List<Customer> allCustomers = customerService.getAllCustomers();
+
+            if (allCustomers.isEmpty()) {
+                log.warn("⚠️  No Customers Found in Database");
+            } else {
+                log.info("✅ Total Customers: {}", allCustomers.size());
+                log.info("--------------------------------------------");
+
+                allCustomers.forEach(customer ->
+                    log.info("  CID: {} | Name: {} | KYC: {} | Status: {}",
+                        customer.getCustomerId(),
+                        customer.getFullName(),
+                        customer.getKycStatus(),
+                        customer.getCustomerStatus()
+                    )
+                );
+
+                log.info("--------------------------------------------");
+            }
+
+            // ----------------------------------------------------------
+            // 3️⃣  GET CUSTOMER BY CUSTOMER ID (CID)
+            // ----------------------------------------------------------
+            log.info("---------- 3. GET CUSTOMER BY CUSTOMER ID ----------");
+
+            String searchCustomerId = "CID1001";
+
+            Optional<Customer> customerById =
+                customerService.getCustomerByCustomerId(searchCustomerId);
+
+            customerById.ifPresentOrElse(
+                customer -> {
+                    log.info("✅ Customer Found!");
+                    log.info("   CID     : {}", customer.getCustomerId());
+                    log.info("   Name    : {}", customer.getFullName());
+                    log.info("   KYC     : {}", customer.getKycStatus());
+                    log.info("   Status  : {}", customer.getCustomerStatus());
+                },
+                () -> log.warn("⚠️  Customer Not Found → CID: {}", searchCustomerId)
+            );
+
+            // ----------------------------------------------------------
+            // 4️⃣  GET CUSTOMERS BY FULL NAME
+            // ----------------------------------------------------------
+            log.info("---------- 4. GET CUSTOMERS BY FULL NAME ----------");
+
+            String searchName = "Rahul";
+
+            List<Customer> customersByName =
+                customerService.getCustomersByFullName(searchName);
+
+            if (customersByName.isEmpty()) {
+                log.warn("⚠️  No Customers Found with Name: {}", searchName);
+            } else {
+                log.info("✅ Customers Found with Name '{}': {}", searchName, customersByName.size());
+                customersByName.forEach(customer ->
+                    log.info("   CID: {} | Name: {} | KYC: {} | Status: {}",
+                        customer.getCustomerId(),
+                        customer.getFullName(),
+                        customer.getKycStatus(),
+                        customer.getCustomerStatus()
+                    )
+                );
+            }
 
         // WAIT FOR PRODUCERS
         ExecutorConfig.PRODUCER_POOL.shutdown();
@@ -176,7 +275,11 @@ public class MainApp {
         
     }
 
-    // FILE PROCESSING
+
+    // =========================================================
+    //  FILE PROCESSING
+    // =========================================================
+
     private static void processFile(String fileName, SourceType sourceType) {
 
         log.info("Processing file: {} | Source: {}", fileName, sourceType);
@@ -192,7 +295,7 @@ public class MainApp {
                     continue;
 
                 ExecutorConfig.PRODUCER_POOL.submit(
-                        new IngestionWorker(line.trim(), sourceType, transactionService)
+                    new IngestionWorker(line.trim(), sourceType, transactionService)
                 );
             }
 
@@ -201,7 +304,11 @@ public class MainApp {
         }
     }
 
-    // SWIFT FILE PROCESSING
+
+    // =========================================================
+    //  SWIFT FILE PROCESSING
+    // =========================================================
+
     private static void processSwiftFile(String fileName, SourceType sourceType) {
 
         log.info("Processing SWIFT file: {}", fileName);
@@ -218,7 +325,7 @@ public class MainApp {
 
                     if (block.length() > 0) {
                         ExecutorConfig.PRODUCER_POOL.submit(
-                                new IngestionWorker(block.toString(), sourceType, transactionService)
+                            new IngestionWorker(block.toString(), sourceType, transactionService)
                         );
                         block.setLength(0);
                     }
@@ -230,7 +337,7 @@ public class MainApp {
 
             if (block.length() > 0) {
                 ExecutorConfig.PRODUCER_POOL.submit(
-                        new IngestionWorker(block.toString(), sourceType, transactionService)
+                    new IngestionWorker(block.toString(), sourceType, transactionService)
                 );
             }
 
