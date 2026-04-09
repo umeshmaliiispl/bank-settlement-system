@@ -9,40 +9,25 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * AccountDao Interface
- * Defines all CRUD + Query operations for Account entity
+ * AccountDao Interface Defines all CRUD + Query operations for Account entity
  *
- * Operations:
- * ── WRITE  : save, update, updateBalance, delete
- * ── READ   : findAll, findById, findByAccountNumber,
- *             findByBankName, findByAccountType,
- *             findByAccountStatus, findByCustomerId
+ * Operations: ── WRITE : save, update, updateBalance, delete ── READ : findAll,
+ * findById, findByAccountNumber, findByBankName, findByAccountType,
+ * findByAccountStatus, findByCustomerId
  */
 public interface AccountDao {
 
-    // ==================== WRITE ====================
+	// ==================== READ ====================
 
-    void save(Account account);
+	List<Account> findAll();
 
-    void update(Account account);
+	Optional<Account> findByAccountNumber(String accountNumber);
 
-    void updateBalance(Long accountId, BigDecimal balance);
+	List<Account> findByBankName(String bankName);
 
-    void delete(Long accountId);
+	List<Account> findByAccountType(AccountType accountType);
 
-    // ==================== READ ====================
+	List<Account> findByAccountStatus(AccountStatus accountStatus);
 
-    List<Account> findAll();
-
-    Optional<Account> findById(Long accountId);
-
-    Optional<Account> findByAccountNumber(String accountNumber);
-
-    List<Account> findByBankName(String bankName);
-
-    List<Account> findByAccountType(AccountType accountType);
-
-    List<Account> findByAccountStatus(AccountStatus accountStatus);
-
-    List<Account> findByCustomerId(String customerId);
+	List<Account> findByCustomerId(String customerId);
 }

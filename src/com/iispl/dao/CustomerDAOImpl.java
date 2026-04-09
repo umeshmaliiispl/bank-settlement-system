@@ -71,8 +71,7 @@ public class CustomerDAOImpl implements CustomerDAO {
 	public List<Customer> getAllCustomers() {
 
 		System.out.println("==============================");
-		System.out.println("  GET ALL CUSTOMERS           ");
-		System.out.println("==============================");
+		System.out.println("  GET ALL CUSTOMERS           "); 
 
 		List<Customer> customers = new ArrayList<>();
 
@@ -109,7 +108,6 @@ public class CustomerDAOImpl implements CustomerDAO {
 
 		System.out.println("==============================");
 		System.out.println("  GET ALL ACTIVE CUSTOMERS    ");
-		System.out.println("==============================");
 
 		List<Customer> customers = new ArrayList<>();
 
@@ -121,7 +119,7 @@ public class CustomerDAOImpl implements CustomerDAO {
 				Customer customer = mapRow(rs);
 				customers.add(customer);
 
-				System.out.println(" Active → " + customer.getCustomerId() + " | " + customer.getFullName()
+				System.out.println(" Active -> " + customer.getCustomerId() + " | " + customer.getFullName()
 						+ " | KYC: " + customer.getKycStatus());
 			}
 
@@ -134,9 +132,7 @@ public class CustomerDAOImpl implements CustomerDAO {
 		return customers;
 	}
 
-	// =========================================================
 	// READ — GET ALL VERIFIED CUSTOMERS
-	// =========================================================
 
 	/**
 	 * Retrieves all Customers with kyc_status = 'VERIFIED'.
@@ -148,7 +144,6 @@ public class CustomerDAOImpl implements CustomerDAO {
 
 		System.out.println("==============================");
 		System.out.println("  GET ALL VERIFIED CUSTOMERS  ");
-		System.out.println("==============================");
 
 		List<Customer> customers = new ArrayList<>();
 
@@ -173,10 +168,7 @@ public class CustomerDAOImpl implements CustomerDAO {
 		return customers;
 	}
 
-	// =========================================================
 	// READ — GET BY CUSTOMER_ID
-	// =========================================================
-
 	/**
 	 * Finds a Customer by their business Customer ID (e.g., CID1001).
 	 *
@@ -189,7 +181,6 @@ public class CustomerDAOImpl implements CustomerDAO {
 		System.out.println("========================================");
 		System.out.println("  GET CUSTOMER BY CUSTOMER_ID          ");
 		System.out.println("  Customer ID : " + customerId);
-		System.out.println("========================================");
 
 		try (Connection connection = DatabaseConfig.getConnection();
 				PreparedStatement ps = connection.prepareStatement(SQL_SELECT_BY_CUSTOMER_ID)) {
@@ -219,16 +210,14 @@ public class CustomerDAOImpl implements CustomerDAO {
 		return Optional.empty();
 	}
 
-	// =========================================================
 	// READ — GET BY FULL NAME
-	// =========================================================
 
 	/**
 	 * Finds Customers whose full name contains the given keyword. Case-insensitive
 	 * partial search.
 	 *
-	 * Examples: getCustomersByFullName("Rahul") → finds "Rahul Sharma"
-	 * getCustomersByFullName("sharma") → finds anyone with "sharma"
+	 * Examples: getCustomersByFullName("Rahul") -> finds "Rahul Sharma"
+	 * getCustomersByFullName("sharma") -> finds anyone with "sharma"
 	 *
 	 * @param fullName search keyword (partial or full)
 	 * @return List of matching Customer objects
@@ -254,8 +243,8 @@ public class CustomerDAOImpl implements CustomerDAO {
 					Customer customer = mapRow(rs);
 					customers.add(customer);
 
-					System.out.println(" Found → " + customer.getCustomerId() + " | " + customer.getFullName()
-							+ " | " + customer.getKycStatus() + " | " + customer.getCustomerStatus());
+					System.out.println(" Found -> " + customer.getCustomerId() + " | " + customer.getFullName() + " | "
+							+ customer.getKycStatus() + " | " + customer.getCustomerStatus());
 				}
 			}
 
@@ -268,9 +257,7 @@ public class CustomerDAOImpl implements CustomerDAO {
 		return customers;
 	}
 
-	// =========================================================
-	// HELPER — Map ResultSet Row → Customer Object
-	// =========================================================
+	// HELPER — Map ResultSet Row -> Customer Object
 
 	/**
 	 * Maps a single ResultSet row to a Customer entity.

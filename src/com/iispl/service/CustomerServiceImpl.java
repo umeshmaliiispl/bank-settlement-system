@@ -18,7 +18,7 @@ public class CustomerServiceImpl implements CustomerService {
 	 * CustomerDAO reference. We use the interface type so we can swap
 	 * implementations easily.
 	 */
-	private final CustomerDAO customerDao;
+	private final CustomerDAO customerDao; 
 
 	/*
 	 * Default Constructor. Creates a real CustomerDAOImpl for actual database use.
