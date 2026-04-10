@@ -20,6 +20,8 @@ public interface TransactionDao {
 	
     boolean save(IncomingTransaction txn);
 
+    
+    public void printBankWiseSettlement(String batchId);
     /**
      * Fetch all transactions
      */

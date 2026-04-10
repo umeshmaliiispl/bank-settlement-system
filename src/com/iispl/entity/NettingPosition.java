@@ -9,6 +9,8 @@ import java.util.Set;
 import com.iispl.enums.NetDirection;
 
 public class NettingPosition {
+	
+	
 
 	private String cycleId;
 	private LocalDate positionDate;
@@ -119,13 +121,14 @@ public class NettingPosition {
 		this.receiverBank = receiverBank;
 	}
 
-	public String getCurrency() {
-		return currency;
-	}
+    private int totalTxnCount;
+    private int totalDepositCount;
+    private int totalWithdrawCount;
 
-	public void setCurrency(String currency) {
-		this.currency = currency;
-	}
+    // ✅ Use BigDecimal (correct for banking)
+    private BigDecimal totalDepositAmount = BigDecimal.ZERO;
+    private BigDecimal totalWithdrawAmount = BigDecimal.ZERO;
+    private BigDecimal netAmount = BigDecimal.ZERO;
 
 	public int getTotalTxnCount() {
 		return totalTxnCount;
@@ -151,9 +154,8 @@ public class NettingPosition {
 		return netAmount;
 	}
 
-	public NetDirection getDirection() {
-		return direction;
-	}
+    public void calculateNet() {
+        netAmount = totalDepositAmount.subtract(totalWithdrawAmount);
 
 	public void setDirection(NetDirection direction) {
 		this.direction = direction;

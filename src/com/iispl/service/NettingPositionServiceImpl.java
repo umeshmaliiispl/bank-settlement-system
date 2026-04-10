@@ -21,7 +21,7 @@ public class NettingPositionServiceImpl implements NettingPositionService {
     @Override
     public void calculateAndStore(List<IncomingTransaction> txns) {
 
-        // ✅ Group by bank
+        // Group by bank
         Map<String, NettingPosition> map = new HashMap<>();
 
         for (IncomingTransaction txn : txns) {

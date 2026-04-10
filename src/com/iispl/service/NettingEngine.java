@@ -35,7 +35,7 @@ public class NettingEngine {
 
             if (position == null) {
                 position = new NettingPosition();
-                position.setSenderBank(bank);          // ✅ FIXED
+                position.setSenderBank(bank);          //  FIXED
                 position.setCurrency(txn.getCurrency());
             }
 

@@ -1,3 +1,5 @@
+
+
 package com.iispl.utility;
 
 import java.io.BufferedReader;
@@ -12,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.iispl.config.AppInitializer;
+import com.iispl.config.DatabaseConfig;
 import com.iispl.config.ExecutorConfig;
 import com.iispl.dao.AccountDaoImpl;
 import com.iispl.dao.CustomerDAOImpl;
@@ -36,6 +39,14 @@ import com.iispl.service.SettlementService;
 import com.iispl.service.SettlementServiceImpl;
 import com.iispl.service.TransactionService;
 import com.iispl.service.TransactionServiceImpl;
+import com.iispl.service.CustomerServiceImpl;
+
+//ONLY THESE IMPORTS ADDED
+import com.iispl.dao.NettingPositionDAOImpl;
+import com.iispl.dao.TransactionDao;
+import com.iispl.dao.TransactionDaoImpl;
+import com.iispl.service.NettingService;
+import com.iispl.service.NettingServiceImpl;
 
 public class MainApp {
 
