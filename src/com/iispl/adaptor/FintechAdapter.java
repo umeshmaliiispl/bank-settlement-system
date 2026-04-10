@@ -284,15 +284,106 @@ public class FintechAdapter implements TransactionAdapter {
     }
 
     // ── IFSC Derivation Logic ───────────────────────────────────────────────
+    
+ // ── IFSC Derivation Logic ───────────────────────────────────────────────
+    /**
+     * Derives a representative IFSC code from a Fintech account number.
+     *
+     * <p>Fintech payloads carry account numbers (not raw IFSC codes), so the
+     * IFSC is inferred from the account number prefix — which mirrors the
+     * bank's standard IFSC prefix convention.
+     *
+     * <p>This is used solely for bank-name resolution and reporting;
+     * it is not used for actual settlement routing.
+     *
+     * @param accountNumber the sender or receiver account number
+     * @return a representative IFSC code, or "UNKN0000000" if unrecognized
+     */
     private String deriveIfscCode(String accountNumber) {
-        if (accountNumber == null) return "";
+        if (accountNumber == null || accountNumber.trim().isEmpty()) {
+            return "UNKN0000000";
+        }
 
-        if (accountNumber.startsWith("HDFC")) return "HDFC0000001";
-        if (accountNumber.startsWith("AXIS")) return "UTIB0000001";
-        if (accountNumber.startsWith("ICIC")) return "ICIC0000001";
+        String acc = accountNumber.trim().toUpperCase();
 
+        // ── Public Sector Banks ─────────────────────────────────────────────
+        if (acc.startsWith("SBIN"))  return "SBIN0000001";   // State Bank of India
+        if (acc.startsWith("BKID"))  return "BKID0000001";   // Bank of India
+        if (acc.startsWith("BARB"))  return "BARB0000001";   // Bank of Baroda
+        if (acc.startsWith("PUNB"))  return "PUNB0000001";   // Punjab National Bank
+        if (acc.startsWith("CNRB"))  return "CNRB0000001";   // Canara Bank
+        if (acc.startsWith("UBIN"))  return "UBIN0000001";   // Union Bank of India
+        if (acc.startsWith("IOBA"))  return "IOBA0000001";   // Indian Overseas Bank
+        if (acc.startsWith("IDIB"))  return "IDIB0000001";   // Indian Bank
+        if (acc.startsWith("CBIN"))  return "CBIN0000001";   // Central Bank of India
+        if (acc.startsWith("UCBA"))  return "UCBA0000001";   // UCO Bank
+        if (acc.startsWith("BODB"))  return "BODB0000001";   // Bank of Maharashtra
+        if (acc.startsWith("PSIB"))  return "PSIB0000001";   // Punjab & Sind Bank
+
+        // ── Major Private Sector Banks ──────────────────────────────────────
+        if (acc.startsWith("HDFC"))  return "HDFC0000001";   // HDFC Bank
+        if (acc.startsWith("ICIC"))  return "ICIC0000001";   // ICICI Bank
+        if (acc.startsWith("AXIS"))  return "UTIB0000001";   // Axis Bank (UTIB prefix)
+        if (acc.startsWith("UTIB"))  return "UTIB0000001";   // Axis Bank (alternate)
+        if (acc.startsWith("KKBK"))  return "KKBK0000001";   // Kotak Mahindra Bank
+        if (acc.startsWith("YESB"))  return "YESB0000001";   // Yes Bank
+        if (acc.startsWith("INDB"))  return "INDB0000001";   // IndusInd Bank
+        if (acc.startsWith("IDFB"))  return "IDFB0000001";   // IDFC FIRST Bank
+        if (acc.startsWith("FDRL"))  return "FDRL0000001";   // Federal Bank
+        if (acc.startsWith("KVBL"))  return "KVBL0000001";   // Karur Vysya Bank
+        if (acc.startsWith("SIBL"))  return "SIBL0000001";   // South Indian Bank
+        if (acc.startsWith("DBSS"))  return "DBSS0000001";   // DBS Bank India
+        if (acc.startsWith("DCBL"))  return "DCBL0000001";   // DCB Bank
+        if (acc.startsWith("KARB"))  return "KARB0000001";   // Karnataka Bank
+        if (acc.startsWith("JAKA"))  return "JAKA0000001";   // J&K Bank
+        if (acc.startsWith("CSBK"))  return "CSBK0000001";   // CSB Bank
+        if (acc.startsWith("RBLB"))  return "RBLB0000001";   // RBL Bank
+        if (acc.startsWith("RATN"))  return "RATN0000001";   // RBL Bank (alternate)
+        if (acc.startsWith("TMBL"))  return "TMBL0000001";   // Tamilnad Mercantile
+        if (acc.startsWith("AUBL"))  return "AUBL0000001";   // AU Small Finance Bank
+        if (acc.startsWith("ESFB"))  return "ESFB0000001";   // Equitas Small Finance
+        if (acc.startsWith("UJVN"))  return "UFSB0000001";   // Ujjivan Small Finance
+        if (acc.startsWith("UFSB"))  return "UFSB0000001";   // Ujjivan Small Finance
+
+        // ── Payment Banks ───────────────────────────────────────────────────
+        if (acc.startsWith("AIRP"))  return "AIRP0000001";   // Airtel Payments Bank
+        if (acc.startsWith("FINO"))  return "FINO0000001";   // Fino Payments Bank
+        if (acc.startsWith("IPOS"))  return "IPOS0000001";   // India Post Payments Bank
+        if (acc.startsWith("PAYT"))  return "PAYT0000001";   // Paytm Payments Bank
+
+        // ── Foreign Banks ───────────────────────────────────────────────────
+        if (acc.startsWith("CITI"))  return "CITI0000001";   // Citibank India
+        if (acc.startsWith("HSBC"))  return "HSBC0000001";   // HSBC India
+        if (acc.startsWith("DEUT"))  return "DEUT0000001";   // Deutsche Bank India
+        if (acc.startsWith("SCBL"))  return "SCBL0000001";   // Standard Chartered India
+        if (acc.startsWith("BARC"))  return "BARC0000001";   // Barclays India
+        if (acc.startsWith("BOFA"))  return "BOFA0000001";   // Bank of America India
+        if (acc.startsWith("JPMO"))  return "JPMO0000001";   // JPMorgan Chase India
+        if (acc.startsWith("MHCB"))  return "MHCB0000001";   // Mizuho Bank India
+        if (acc.startsWith("SMBC"))  return "SMBC0000001";   // SMBC India
+        if (acc.startsWith("ANZB"))  return "ANZB0000001";   // ANZ Bank India
+        if (acc.startsWith("BNPP"))  return "BNPP0000001";   // BNP Paribas India
+
+        // ── RBI / Internal ──────────────────────────────────────────────────
+        if (acc.startsWith("RBIS"))  return "RBIS0000001";   // Reserve Bank of India
+        if (acc.startsWith("IISPL")) return "IISP0000001";   // IISPL Internal account
+        if (acc.startsWith("IISP"))  return "IISP0000001";   // IISPL Internal account
+
+        // ── Unrecognized ────────────────────────────────────────────────────
         return "UNKN0000000";
     }
+    
+//    private String deriveIfscCode(String accountNumber) {
+//        if (accountNumber == null) return "";
+//
+//        if (accountNumber.startsWith("HDFC")) return "HDFC0000001";
+//        if (accountNumber.startsWith("AXIS")) return "UTIB0000001";
+//        if (accountNumber.startsWith("ICIC")) return "ICIC0000001";
+//
+//        return "UNKN0000000";
+//    }
+//    
+    
 
     // ── Logging ─────────────────────────────────────────────────────────────
     private void logTransaction(IncomingTransaction transaction) {

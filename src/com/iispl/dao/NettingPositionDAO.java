@@ -1,7 +1,10 @@
 package com.iispl.dao;
 
+import java.util.List;
 import com.iispl.entity.NettingPosition;
 
 public interface NettingPositionDAO {
-	void save(NettingPosition position);
+
+    void saveAll(List<NettingPosition> positions);
+
 }

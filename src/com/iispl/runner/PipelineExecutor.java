@@ -1,13 +1,14 @@
 package com.iispl.runner;
 
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import com.iispl.dao.TransactionDaoImpl;
 import com.iispl.entity.IncomingTransaction;
 import com.iispl.service.NettingEngine;
 import com.iispl.service.SettlementService;
-
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import com.iispl.service.SettlementServiceImpl;
 
 public class PipelineExecutor {
 
@@ -15,7 +16,7 @@ public class PipelineExecutor {
 
         TransactionDaoImpl transactionDao= new TransactionDaoImpl();
         NettingEngine nettingEngine = new NettingEngine();
-        SettlementService settlementService = new SettlementService();
+        SettlementService settlementService = new SettlementServiceImpl();
 
         List<IncomingTransaction> transactions =
         		transactionDao.findSuccessfulTransactions();

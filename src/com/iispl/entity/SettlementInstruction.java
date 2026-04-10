@@ -7,69 +7,90 @@ import com.iispl.enums.InstructionStatus;
 
 public class SettlementInstruction {
 
-	private String instructionId;
-	private String fromBank;
-	private String toBank;
-	private double amount;
+    private String instructionId;
+    private String fromBank;
+    private String toBank;
+    private double amount;
 
-	private ChannelType channel;
-	private InstructionStatus instructionStatus;
+    private ChannelType channel;
+    private InstructionStatus instructionStatus;
 
-	private LocalDate valueDate;
+    private LocalDate valueDate;
 
-	public String getInstructionId() {
-		return instructionId;
-	}
+    // =========================================================
+    // GETTERS & SETTERS
+    // =========================================================
 
-	public void setInstructionId(String instructionId) {
-		this.instructionId = instructionId;
-	}
+    public String getInstructionId() {
+        return instructionId;
+    }
 
-	public String getFromBank() {
-		return fromBank;
-	}
+    public void setInstructionId(String instructionId) {
+        this.instructionId = instructionId;
+    }
 
-	public void setFromBank(String fromBank) {
-		this.fromBank = fromBank;
-	}
+    public String getFromBank() {
+        return fromBank;
+    }
 
-	public String getToBank() {
-		return toBank;
-	}
+    public void setFromBank(String fromBank) {
+        this.fromBank = fromBank;
+    }
 
-	public void setToBank(String toBank) {
-		this.toBank = toBank;
-	}
+    public String getToBank() {
+        return toBank;
+    }
 
-	public double getAmount() {
-		return amount;
-	}
+    public void setToBank(String toBank) {
+        this.toBank = toBank;
+    }
 
-	public void setAmount(double amount) {
-		this.amount = amount;
-	}
+    public double getAmount() {
+        return amount;
+    }
 
-	public ChannelType getChannel() {
-		return channel;
-	}
+    public void setAmount(double amount) {
+        this.amount = amount;
+    }
 
-	public void setChannel(ChannelType channel) {
-		this.channel = channel;
-	}
+    public ChannelType getChannel() {
+        return channel;
+    }
 
-	public InstructionStatus getInstructionStatus() {
-		return instructionStatus;
-	}
+    public void setChannel(ChannelType channel) {
+        this.channel = channel;
+    }
 
-	public void setInstructionStatus(InstructionStatus instructionStatus) {
-		this.instructionStatus = instructionStatus;
-	}
+    public InstructionStatus getInstructionStatus() {
+        return instructionStatus;
+    }
 
-	public LocalDate getValueDate() {
-		return valueDate;
-	}
+    public void setInstructionStatus(
+            InstructionStatus instructionStatus) {
+        this.instructionStatus = instructionStatus;
+    }
 
-	public void setValueDate(LocalDate valueDate) {
-		this.valueDate = valueDate;
-	}
+    public LocalDate getValueDate() {
+        return valueDate;
+    }
+
+    public void setValueDate(LocalDate valueDate) {
+        this.valueDate = valueDate;
+    }
+
+    // =========================================================
+    // OPTIONAL DEBUG PRINT
+    // =========================================================
+    @Override
+    public String toString() {
+        return "SettlementInstruction{" +
+                "instructionId='" + instructionId + '\'' +
+                ", fromBank='" + fromBank + '\'' +
+                ", toBank='" + toBank + '\'' +
+                ", amount=" + amount +
+                ", channel=" + channel +
+                ", instructionStatus=" + instructionStatus +
+                ", valueDate=" + valueDate +
+                '}';
+    }
 }

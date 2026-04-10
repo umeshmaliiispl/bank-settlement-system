@@ -111,3 +111,4 @@ public class SettlementBatch extends BaseEntity {
 		this.runAt = runAt;
 	}
 }
+

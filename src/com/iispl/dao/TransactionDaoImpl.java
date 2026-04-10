@@ -3,12 +3,14 @@ package com.iispl.dao;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.iispl.config.DatabaseConfig;
 import com.iispl.entity.IncomingTransaction;
 import com.iispl.exception.DatabaseInsertException;
+import com.iispl.utility.DBConnection;
 
 /**
  * TransactionDaoImpl — Compatible with immutable IncomingTransaction.
@@ -49,45 +51,57 @@ public class TransactionDaoImpl implements TransactionDao {
           + ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
     @Override
+    public void checkConnection() {
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT 1")) {
+
+            ps.executeQuery(); // just executes, no heavy data
+
+        } catch (SQLException e) {
+            throw new RuntimeException("DB connection failed", e);
+        }
+    }
+    
+    @Override
     public boolean save(IncomingTransaction txn) {
 
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(INSERT_SQL)) {
+        try (Connection connection = DatabaseConfig.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(INSERT_SQL)) {
 
             // All READ-ONLY access — no setters called on txn
-            ps.setLong(1,        resolveSourceSystemId(txn.getChannelCode()));
-            ps.setString(2,      txn.getSourceRef());
-            ps.setString(3,      txn.getRawPayload());
-            ps.setString(4,      txn.getNormalizedPayload());
-            ps.setString(5,      txn.getTxnType().name());
-            ps.setBigDecimal(6,  txn.getAmount());
-            ps.setBigDecimal(7,  txn.getGrossAmount());
-            ps.setBigDecimal(8,  txn.getFeeAmount());
-            ps.setString(9,      txn.getCurrency());
-            ps.setTimestamp(10,  java.sql.Timestamp.valueOf(txn.getValueDate()));
+        	preparedStatement.setLong(1,        resolveSourceSystemId(txn.getChannelCode()));
+        	preparedStatement.setString(2,      txn.getSourceRef());
+        	preparedStatement.setString(3,      txn.getRawPayload());
+        	preparedStatement.setString(4,      txn.getNormalizedPayload());
+        	preparedStatement.setString(5,      txn.getTxnType().name());
+        	preparedStatement.setBigDecimal(6,  txn.getAmount());
+        	preparedStatement.setBigDecimal(7,  txn.getGrossAmount());
+        	preparedStatement.setBigDecimal(8,  txn.getFeeAmount());
+        	preparedStatement.setString(9,      txn.getCurrency());
+        	preparedStatement.setTimestamp(10,  java.sql.Timestamp.valueOf(txn.getValueDate()));
 
             // txnStatus  → source truth, stored exactly as received
-            ps.setString(11,     txn.getTxnStatus().name());
+        	preparedStatement.setString(11,     txn.getTxnStatus().name());
 
             // processingStatus → internal decision (FAILED / QUEUED / RECEIVED)
-            ps.setString(12,     txn.getProcessingStatus().name());
+        	preparedStatement.setString(12,     txn.getProcessingStatus().name());
 
-            ps.setString(13,     txn.getSenderIfsc());
-            ps.setString(14,     txn.getReceiverIfsc());
-            ps.setString(15,     txn.getSenderBankName());
-            ps.setString(16,     txn.getReceiverBankName());
-            ps.setString(17,     txn.getSenderBic());
-            ps.setString(18,     txn.getReceiverBic());
-            ps.setString(19,     txn.getPartnerName());
-            ps.setString(20,     txn.getMerchantId());
-            ps.setString(21,     txn.getChannelCode());
-            ps.setString(22,     txn.getChecksum());
+        	preparedStatement.setString(13,     txn.getSenderIfsc());
+        	preparedStatement.setString(14,     txn.getReceiverIfsc());
+        	preparedStatement.setString(15,     txn.getSenderBankName());
+        	preparedStatement.setString(16,     txn.getReceiverBankName());
+        	preparedStatement.setString(17,     txn.getSenderBic());
+            preparedStatement.setString(18,     txn.getReceiverBic());
+            preparedStatement.setString(19,     txn.getPartnerName());
+            preparedStatement.setString(20,     txn.getMerchantId());
+            preparedStatement.setString(21,     txn.getChannelCode());
+            preparedStatement.setString(22,     txn.getChecksum());
 
-            // errorMessage → null for valid, set for FAILED scenarios
-            ps.setString(23,     txn.getErrorMessage());
+            // errorMessage ->  null for valid, set for FAILED scenarios
+            preparedStatement.setString(23,     txn.getErrorMessage());
 
-            ps.executeUpdate();
-            return true; // ✅ Successfully inserted
+            preparedStatement.executeUpdate();
+            return true; // Successfully inserted
 
         } catch (Exception e) {
 
@@ -103,10 +117,10 @@ public class TransactionDaoImpl implements TransactionDao {
                     txn.getChannelCode(),
                     txn.getSourceRef()
                 );
-                return false; // ✅ Signal duplicate — do NOT throw
+                return false; // Signal duplicate - do NOT throw
             }
 
-            // ── REAL / UNEXPECTED DB ERROR ────────────────────────────────
+            // REAL / UNEXPECTED DB ERROR 
             throw new DatabaseInsertException(
                 "DB insert failed for REF=" + txn.getSourceRef(), e, txn
             );
@@ -156,7 +170,7 @@ public class TransactionDaoImpl implements TransactionDao {
         return list;
     }
 
-    // ── Row Mapper — builds NEW immutable object from DB ──────────────────────
+    // Row Mapper builds NEW immutable object from DB 
 
     private IncomingTransaction mapRow(ResultSet rs) throws Exception {
         return new IncomingTransaction.Builder()
@@ -169,6 +183,11 @@ public class TransactionDaoImpl implements TransactionDao {
                 .receiverBankName(rs.getString("receiver_bank_name"))
                 .amount(rs.getBigDecimal("amount"))
                 .currency(rs.getString("currency"))
+                .valueDate(
+                    rs.getTimestamp("value_date") != null
+                        ? rs.getTimestamp("value_date").toLocalDateTime()
+                        : null
+                )
                 .txnStatus(
                     com.iispl.enums.TransactionStatus.valueOf(rs.getString("txn_status"))
                 )
@@ -182,9 +201,7 @@ public class TransactionDaoImpl implements TransactionDao {
                 .build();
     }
 
-    // ── Duplicate Detection ────────────────────────────────────────────────────
-    // Works for MySQL ("Duplicate entry"), PostgreSQL ("unique constraint"),
-    // H2/HSQLDB, and any JDBC driver that surfaces the keyword.
+   
 
     private boolean isDuplicate(Exception e) {
         if (e == null || e.getMessage() == null) return false;
@@ -192,7 +209,7 @@ public class TransactionDaoImpl implements TransactionDao {
         return msg.contains("duplicate") || msg.contains("unique");
     }
 
-    // ── Source System ID Resolver ──────────────────────────────────────────────
+    // Source System ID Resolver 
 
     private Long resolveSourceSystemId(String channelCode) {
         if (channelCode == null) return 1L;
@@ -206,5 +223,113 @@ public class TransactionDaoImpl implements TransactionDao {
             default:        return 1L;
         }
     }
-}
 
+
+
+
+	/**
+	 * @return true if inserted, false if duplicate skipped
+	 */
+	public boolean saveIfNotDuplicate(IncomingTransaction transaction) {
+
+		try (Connection connection = DatabaseConfig.getConnection();
+				PreparedStatement ps = connection.prepareStatement(INSERT_SQL)) {
+
+			ps.setLong(1, resolveSourceSystemId(transaction.getChannelCode()));
+			ps.setString(2, transaction.getSourceRef());
+			ps.setString(3, transaction.getRawPayload());
+			ps.setString(4, transaction.getNormalizedPayload());
+
+			ps.setString(5, transaction.getTxnType().name());
+			ps.setBigDecimal(6, transaction.getAmount());
+			ps.setBigDecimal(7, transaction.getGrossAmount());
+			ps.setBigDecimal(8, transaction.getFeeAmount());
+			ps.setString(9, transaction.getCurrency());
+			ps.setObject(10, transaction.getValueDate());
+
+			ps.setString(11, transaction.getTxnStatus().name());
+			ps.setString(12, transaction.getProcessingStatus().name());
+
+			ps.setString(13, transaction.getSenderIfsc());
+			ps.setString(14, transaction.getReceiverIfsc());
+
+			ps.setString(15, transaction.getSenderBankName());
+			ps.setString(16, transaction.getReceiverBankName());
+
+			ps.setString(17, transaction.getSenderBic());
+			ps.setString(18, transaction.getReceiverBic());
+
+			ps.setString(19, transaction.getPartnerName());
+			ps.setString(20, transaction.getMerchantId());
+
+			ps.setString(21, transaction.getChannelCode());
+			ps.setString(22, transaction.getChecksum());
+			ps.setString(23, transaction.getErrorMessage());
+
+			int rowsInserted = ps.executeUpdate();
+
+			return rowsInserted > 0;
+
+		} catch (Exception exception) {
+
+			throw new DatabaseInsertException("Database insert failed for reference: " + transaction.getSourceRef(),
+					exception, transaction);
+		}
+	}
+
+
+    @Override
+    public List<IncomingTransaction> getUnsettledTranasactions() {
+
+        List<IncomingTransaction> list = new ArrayList<>();
+
+        String sql = "SELECT it.* " +
+                     "FROM incoming_transaction it " +
+                     "LEFT JOIN settlement_record sr " +
+                     "ON it.id = sr.incoming_txn_id " +
+                     "WHERE sr.incoming_txn_id IS NULL " +
+                     "AND it.txn_status = 'SUCCESS' " +
+                     "AND it.processing_status = 'QUEUED'";
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+
+                IncomingTransaction txn = new IncomingTransaction.Builder()
+                        .incomingTxnId(rs.getLong("id"))
+                        .sourceRef(rs.getString("source_ref"))
+                        .channelCode(rs.getString("channel_code"))
+                        .senderBankName(rs.getString("sender_bank_name"))
+                        .receiverBankName(rs.getString("receiver_bank_name"))
+                        .amount(rs.getBigDecimal("amount"))
+                        .currency(rs.getString("currency"))
+                        .txnStatus(
+                            com.iispl.enums.TransactionStatus.valueOf(rs.getString("txn_status"))
+                        )
+                        .processingStatus(
+                            com.iispl.enums.ProcessingStatus.valueOf(rs.getString("processing_status"))
+                        )
+                        .txnType(
+                            com.iispl.enums.TransactionType.valueOf(rs.getString("txn_type"))
+                        )
+                        .valueDate(
+                            rs.getTimestamp("value_date") != null
+                                ? rs.getTimestamp("value_date").toLocalDateTime()
+                                : null
+                        )
+                        .build();
+
+                list.add(txn);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+
+}

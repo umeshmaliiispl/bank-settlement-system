@@ -1,0 +1,12 @@
+<SettlementBatch>
+  <BatchId>STLMNT-20260408-1775659908318</BatchId>
+  <BatchDate>2026-04-08</BatchDate>
+  <Transactions>
+    <Transaction>
+      <Ref>PAYTM-008</Ref>
+      <Amount>18130.0000</Amount>
+      <Channel>FINTECH</Channel>
+      <Status>SUCCESS</Status>
+    </Transaction>
+  </Transactions>
+</SettlementBatch>

@@ -178,7 +178,6 @@ public class SettlementResult {
 		this.processingTimeMs = processingTimeMs;
 	}
 
-	// ── toString ──────────────────────────────────────────────────────────────
 
 	@Override
 	public String toString() {

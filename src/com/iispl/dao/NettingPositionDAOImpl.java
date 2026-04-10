@@ -1,36 +1,50 @@
 package com.iispl.dao;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.util.List;
+
 import com.iispl.config.DatabaseConfig;
 import com.iispl.entity.NettingPosition;
 
 public class NettingPositionDAOImpl implements NettingPositionDAO {
 
-	@Override
-	public void save(NettingPosition pos) {
+	// No-arg constructor (used by SettlementServiceImpl internally)
+	public NettingPositionDAOImpl() {
+	}
 
-		String sql = "INSERT INTO netting_position " +
-		        "(bank_name, currency, gross_debit_amount, gross_credit_amount, net_amount, direction, position_date, created_by) " +
-		        "VALUES (?, ?, ?, ?, ?, ?, CURRENT_DATE, ?) " +
-		        "ON CONFLICT (bank_name, currency, position_date) DO UPDATE SET " +
-		        "gross_debit_amount = netting_position.gross_debit_amount + EXCLUDED.gross_debit_amount, " +
-		        "gross_credit_amount = netting_position.gross_credit_amount + EXCLUDED.gross_credit_amount, " +
-		        "net_amount = netting_position.net_amount + EXCLUDED.net_amount, " +
-		        "direction = EXCLUDED.direction, " +
-		        "updated_at = NOW();";
-		
-		
+	// Connection constructor (used by NettingServiceImpl via MainApp)
+	public NettingPositionDAOImpl(Connection conn) {
+		// Connection accepted for API compatibility; pool is used per-operation.
+	}
+
+	@Override
+	public void saveAll(List<NettingPosition> list) {
+
+		String sql = "INSERT INTO netting_position ("
+				+ "bank_name, position_date, total_credit, total_debit, net_amount, direction) "
+				+ "VALUES (?, ?, ?, ?, ?, ?) " + "ON CONFLICT (bank_name, position_date) DO UPDATE SET "
+				+ "total_credit = EXCLUDED.total_credit, " + "total_debit = EXCLUDED.total_debit, "
+				+ "net_amount = EXCLUDED.net_amount, " + "direction = EXCLUDED.direction";
+
 		try (Connection conn = DatabaseConfig.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
-			ps.setString(1, pos.getBankName());
-			ps.setString(2, pos.getCurrency());
-			ps.setDouble(3, pos.getGrossDebitAmount());
-			ps.setDouble(4, pos.getGrossCreditAmount());
-			ps.setDouble(5, pos.getNetAmount());
-			ps.setString(6, pos.getDirection().name());
-			ps.setString(7, "SYSTEM");  
+			for (NettingPosition np : list) {
 
-			ps.executeUpdate();
+				// EXACT MATCH WITH DB
+				ps.setString(1, np.getSenderBank()); // bank_name
+				ps.setDate(2, java.sql.Date.valueOf(np.getPositionDate())); // position_date
+				ps.setBigDecimal(3, np.getTotalDepositAmount()); // total_credit
+				ps.setBigDecimal(4, np.getTotalWithdrawAmount()); // total_debit
+				ps.setBigDecimal(5, np.getNetAmount()); // net_amount
+				ps.setString(6, np.getDirection().name()); // direction
+
+				ps.addBatch();
+			}
+
+			ps.executeBatch();
+
+			System.out.println("✅ Netting saved/updated successfully in DB!");
 
 		} catch (Exception e) {
 			e.printStackTrace();
