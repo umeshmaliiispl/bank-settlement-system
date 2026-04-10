@@ -1,14 +1,19 @@
 package com.iispl.config;
 
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ExecutorConfig {
 
-	public static final ExecutorService PRODUCER_POOL = Executors.newFixedThreadPool(5);
+    // Remove static final pools — they can't be reused after shutdown
 
-	public static final ExecutorService CONSUMER_POOL = new ThreadPoolExecutor(
-			5, // core threads
-			20, // max threads
-			60, // idle timeout
-			TimeUnit.SECONDS, new LinkedBlockingQueue<>());
+    // Call this to get a fresh producer pool every time
+    public static ExecutorService newProducerPool() {
+        return Executors.newFixedThreadPool(10);
+    }
+
+    // Call this to get a fresh consumer pool every time
+    public static ExecutorService newConsumerPool() {
+        return Executors.newFixedThreadPool(5);
+    }
 }

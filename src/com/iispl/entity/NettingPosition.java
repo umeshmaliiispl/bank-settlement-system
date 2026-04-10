@@ -1,3 +1,4 @@
+
 package com.iispl.entity;
 
 import java.math.BigDecimal;
@@ -11,15 +12,114 @@ public class NettingPosition {
 	
 	
 
-    private String cycleId;
-    private LocalDate positionDate;
+	private String cycleId;
+	private LocalDate positionDate;
+	private String channel;
 
-    private String channel;
+	private String senderBank;
+	private String receiverBank;
 
-    private String senderBank;
-    private String receiverBank;
+	private String currency;
 
-    private String currency;
+	private int totalTxnCount;
+	private int totalDepositCount;
+	private int totalWithdrawCount;
+
+	private BigDecimal totalDepositAmount = BigDecimal.ZERO;
+	private BigDecimal totalWithdrawAmount = BigDecimal.ZERO;
+	private BigDecimal netAmount = BigDecimal.ZERO;
+
+	private NetDirection direction;
+
+	// OPTIONAL TRACKING
+	private Set<String> senderBanks = new HashSet<>();
+	private Set<String> receiverBanks = new HashSet<>();
+
+	// =========================================================
+	// CONSTRUCTOR
+	// =========================================================
+	public NettingPosition() {
+		this.positionDate = LocalDate.now();
+		this.direction = NetDirection.FLAT;
+	}
+
+	// =========================================================
+	// BUSINESS LOGIC
+	// =========================================================
+
+	public void addDebit(BigDecimal amount) {
+		if (amount == null)
+			return;
+
+		totalTxnCount++;
+		totalWithdrawCount++;
+		totalWithdrawAmount = totalWithdrawAmount.add(amount);
+	}
+
+	public void addCredit(BigDecimal amount) {
+		if (amount == null)
+			return;
+
+		totalTxnCount++;
+		totalDepositCount++;
+		totalDepositAmount = totalDepositAmount.add(amount);
+	}
+
+	public void calculateNet() {
+		netAmount = totalDepositAmount.subtract(totalWithdrawAmount);
+
+		if (netAmount.compareTo(BigDecimal.ZERO) > 0) {
+			direction = NetDirection.NET_CREDIT;
+		} else if (netAmount.compareTo(BigDecimal.ZERO) < 0) {
+			direction = NetDirection.NET_DEBIT;
+		} else {
+			direction = NetDirection.FLAT;
+		}
+	}
+
+	// =========================================================
+	// GETTERS & SETTERS
+	// =========================================================
+
+	public String getCycleId() {
+		return cycleId;
+	}
+
+	public void setCycleId(String cycleId) {
+		this.cycleId = cycleId;
+	}
+
+	public LocalDate getPositionDate() {
+		return positionDate;
+	}
+
+	public void setPositionDate(LocalDate positionDate) {
+		this.positionDate = positionDate;
+	}
+
+	public String getChannel() {
+		return channel;
+	}
+
+	public void setChannel(String channel) {
+		this.channel = channel;
+	}
+
+	public String getSenderBank() {
+		return senderBank;
+	}
+
+	public void setSenderBank(String senderBank) {
+		this.senderBank = senderBank;
+	}
+
+	public String getReceiverBank() {
+		return receiverBank;
+	}
+
+	public void setReceiverBank(String receiverBank) {
+		this.receiverBank = receiverBank;
+	}
 
     private int totalTxnCount;
     private int totalDepositCount;
@@ -30,148 +130,71 @@ public class NettingPosition {
     private BigDecimal totalWithdrawAmount = BigDecimal.ZERO;
     private BigDecimal netAmount = BigDecimal.ZERO;
 
-    private NetDirection direction;
+	public int getTotalTxnCount() {
+		return totalTxnCount;
+	}
 
-    // ================= BUSINESS LOGIC =================
+	public int getTotalDepositCount() {
+		return totalDepositCount;
+	}
 
-    public void addDebit(BigDecimal amount) {
-        if (amount == null) return;
+	public int getTotalWithdrawCount() {
+		return totalWithdrawCount;
+	}
 
-        totalTxnCount++;
-        totalWithdrawCount++;
-        totalWithdrawAmount = totalWithdrawAmount.add(amount);
-    }
+	public BigDecimal getTotalDepositAmount() {
+		return totalDepositAmount;
+	}
 
-    public void addCredit(BigDecimal amount) {
-        if (amount == null) return;
+	public BigDecimal getTotalWithdrawAmount() {
+		return totalWithdrawAmount;
+	}
 
-        totalTxnCount++;
-        totalDepositCount++;
-        totalDepositAmount = totalDepositAmount.add(amount);
-    }
+	public BigDecimal getNetAmount() {
+		return netAmount;
+	}
 
     public void calculateNet() {
         netAmount = totalDepositAmount.subtract(totalWithdrawAmount);
 
-        if (netAmount.compareTo(BigDecimal.ZERO) > 0) {
-            direction = NetDirection.NET_CREDIT;
-        } else if (netAmount.compareTo(BigDecimal.ZERO) < 0) {
-            direction = NetDirection.NET_DEBIT;
-        } else {
-            direction = NetDirection.FLAT;
-        }
-    }
+	public void setDirection(NetDirection direction) {
+		this.direction = direction;
+	}
 
-    // ================= GETTERS & SETTERS =================
+	// =========================================================
+	// OPTIONAL HELPERS
+	// =========================================================
 
-    public String getCycleId() {
-        return cycleId;
-    }
+	public void addSenderBank(String bank) {
+		if (bank != null && !bank.trim().isEmpty()) {
+			senderBanks.add(bank);
+		}
+	}
 
-    public void setCycleId(String cycleId) {
-        this.cycleId = cycleId;
-    }
+	public void addReceiverBank(String bank) {
+		if (bank != null && !bank.trim().isEmpty()) {
+			receiverBanks.add(bank);
+		}
+	}
 
-    public LocalDate getPositionDate() {
-        return positionDate;
-    }
+	public Set<String> getSenderBanks() {
+		return senderBanks;
+	}
 
-    public void setPositionDate(LocalDate positionDate) {
-        this.positionDate = positionDate;
-    }
+	public Set<String> getReceiverBanks() {
+		return receiverBanks;
+	}
 
-    public String getChannel() {
-        return channel;
-    }
+	// =========================================================
+	// DEBUG / LOGGING
+	// =========================================================
 
-    public void setChannel(String channel) {
-        this.channel = channel;
-    }
-
-    public String getSenderBank() {
-        return senderBank;
-    }
-
-    public void setSenderBank(String senderBank) {
-        this.senderBank = senderBank;
-    }
-
-    public String getReceiverBank() {
-        return receiverBank;
-    }
-
-    public void setReceiverBank(String receiverBank) {
-        this.receiverBank = receiverBank;
-    }
-
-    public String getCurrency() {
-        return currency;
-    }
-
-    public void setCurrency(String currency) {
-        this.currency = currency;
-    }
-
-    public int getTotalTxnCount() {
-        return totalTxnCount;
-    }
-
-    public int getTotalDepositCount() {
-        return totalDepositCount;
-    }
-
-    public int getTotalWithdrawCount() {
-        return totalWithdrawCount;
-    }
-
-    public BigDecimal getTotalDepositAmount() {
-        return totalDepositAmount;
-    }
-
-    public BigDecimal getTotalWithdrawAmount() {
-        return totalWithdrawAmount;
-    }
-
-    public BigDecimal getNetAmount() {
-        return netAmount;
-    }
-
-    public NetDirection getDirection() {
-        return direction;
-    }
-
-    public void setDirection(NetDirection direction) {
-        this.direction = direction;
-    }
-    
-    
- // 🔥 ADD THESE
-    private Set<String> senderBanks = new HashSet<>();
-    private Set<String> receiverBanks = new HashSet<>();
-    
- // 🔥 ADD METHODS
-
-    public void addSenderBank(String bank) {
-        if (bank != null && !bank.isEmpty()) {
-            senderBanks.add(bank);
-        }
-    }
-
-    public void addReceiverBank(String bank) {
-        if (bank != null && !bank.isEmpty()) {
-            receiverBanks.add(bank);
-        }
-    }
-
-    public void finalizeBanks() {
-        this.senderBank = senderBanks.size() == 1
-                ? senderBanks.iterator().next()
-                : "MULTIPLE";
-
-        this.receiverBank = receiverBanks.size() == 1
-                ? receiverBanks.iterator().next()
-                : "MULTIPLE";
-    }
-    
-    
+	@Override
+	public String toString() {
+		return "NettingPosition{" + "cycleId='" + cycleId + '\'' + ", positionDate=" + positionDate + ", channel='"
+				+ channel + '\'' + ", senderBank='" + senderBank + '\'' + ", receiverBank='" + receiverBank + '\''
+				+ ", currency='" + currency + '\'' + ", totalTxnCount=" + totalTxnCount + ", totalDepositAmount="
+				+ totalDepositAmount + ", totalWithdrawAmount=" + totalWithdrawAmount + ", netAmount=" + netAmount
+				+ ", direction=" + direction + '}';
+	}
 }

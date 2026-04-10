@@ -16,16 +16,16 @@ public class DBConnection {
                 return connection;
             }
 
-            Properties props = new Properties();
+            Properties properties = new Properties();
 
-            // ✅ Load from src folder directly
-            FileInputStream fis = new FileInputStream("src/db.properties");
-            props.load(fis);
+            //  Load from src folder directly
+            FileInputStream fileInputStream = new FileInputStream("src/db.properties");
+            properties.load(fileInputStream);
 
-            String driver = props.getProperty("DRIVER_CLASS");
-            String url = props.getProperty("CONNECTION_STRING");
-            String username = props.getProperty("USERNAME");
-            String password = props.getProperty("PASSWORD");
+            String driver = properties.getProperty("DRIVER_CLASS");
+            String url = properties.getProperty("CONNECTION_STRING");
+            String username = properties.getProperty("USERNAME");
+            String password = properties.getProperty("PASSWORD");
 
             Class.forName(driver);
 

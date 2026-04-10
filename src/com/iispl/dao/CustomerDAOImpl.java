@@ -71,7 +71,7 @@ public class CustomerDAOImpl implements CustomerDAO {
 	public List<Customer> getAllCustomers() {
 
 		System.out.println("==============================");
-		System.out.println("  GET ALL CUSTOMERS           "); 
+		System.out.println("  GET ALL CUSTOMERS           ");
 
 		List<Customer> customers = new ArrayList<>();
 

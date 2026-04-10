@@ -1,10 +1,5 @@
 package com.iispl.dao;
 
-import com.iispl.config.DatabaseConfig;
-import com.iispl.entity.Account;
-import com.iispl.enums.AccountStatus;
-import com.iispl.enums.AccountType;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -13,6 +8,11 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import com.iispl.config.DatabaseConfig;
+import com.iispl.entity.Account;
+import com.iispl.enums.AccountStatus;
+import com.iispl.enums.AccountType;
 
 /*
  * AccountDaoImpl
@@ -351,7 +351,7 @@ public class AccountDaoImpl implements AccountDao {
         try {
             account.setAccountStatus(AccountStatus.valueOf(accountStatusStr));
         } catch (IllegalArgumentException e) {
-            System.err.println("  ⚠  Unknown AccountStatus in DB : ["
+            System.err.println("Unknown AccountStatus in DB : ["
                 + accountStatusStr + "]"
                 + " for Account : " + rs.getString("account_number")
                 + " — Setting to null.");

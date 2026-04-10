@@ -3,12 +3,14 @@ package com.iispl.dao;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.iispl.config.DatabaseConfig;
 import com.iispl.entity.IncomingTransaction;
 import com.iispl.exception.DatabaseInsertException;
+import com.iispl.utility.DBConnection;
 
 /**
  * TransactionDaoImpl — Compatible with immutable IncomingTransaction.
@@ -48,6 +50,18 @@ public class TransactionDaoImpl implements TransactionDao {
           + "partner_name, merchant_id, channel_code, checksum, error_message"
           + ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
+    @Override
+    public void checkConnection() {
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT 1")) {
+
+            ps.executeQuery(); // just executes, no heavy data
+
+        } catch (SQLException e) {
+            throw new RuntimeException("DB connection failed", e);
+        }
+    }
+    
     @Override
     public boolean save(IncomingTransaction txn) {
 
@@ -309,9 +323,7 @@ public class TransactionDaoImpl implements TransactionDao {
                 .build();
     }
 
-    // Duplicate Detection 
-    // Works for MySQL ("Duplicate entry"), PostgreSQL ("unique constraint"),
-    // H2/HSQLDB, and any JDBC driver that surfaces the keyword.
+   
 
     private boolean isDuplicate(Exception e) {
         if (e == null || e.getMessage() == null) return false;
@@ -333,7 +345,6 @@ public class TransactionDaoImpl implements TransactionDao {
             default:        return 1L;
         }
     }
-
 
 
 
@@ -441,6 +452,6 @@ public class TransactionDaoImpl implements TransactionDao {
 
         return list;
     }
-    
-}
 
+
+}

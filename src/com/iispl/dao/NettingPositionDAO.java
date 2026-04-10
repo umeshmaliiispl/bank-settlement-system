@@ -5,6 +5,6 @@ import com.iispl.entity.NettingPosition;
 
 public interface NettingPositionDAO {
 
-    void saveAll(List<NettingPosition> positions);   // ✅ ONLY THIS
+    void saveAll(List<NettingPosition> positions);
 
 }
